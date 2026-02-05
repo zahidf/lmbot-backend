@@ -13,6 +13,7 @@ class DocumentModel(Base):
     title = Column(String(500), nullable=False)
     file_name = Column(String(500), nullable=False)
     file_type = Column(String(50), nullable=False)  # pdf, docx, etc.
+    file_path = Column(String(500), nullable=False)
     
     # Product association
     product_series = Column(String(50), nullable=True, index=True)  # TX, FD, HC, KS

@@ -18,7 +18,7 @@ class ProcessChatQuery:
     4. Save chat message
     """
     
-    SIMILARITY_THRESHOLD = 0.7
+    SIMILARITY_THRESHOLD = 0.3
     TOP_K = 5
     
     def __init__(

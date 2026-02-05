@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/lmbot_db"
     DATABASE_ECHO: bool = True
+    DB_USER: str
+    DB_PASSWORD:str
+    DB_HOST:str
+    DB_PORT:str
+    DB_NAME:str
     
     # Security
     SECRET_KEY: str = "secret_key"
