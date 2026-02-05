@@ -12,7 +12,18 @@ class ChatRepositoryImpl(ChatRepository):
     
     def __init__(self, session: AsyncSession):
         self.session = session
-    
+
+    def _to_entity(self, model: ChatMessageModel) -> ChatMessage:
+        """Convert database model to domain entity"""
+        return ChatMessage(
+            id=str(model.id),
+            user_id=str(model.user_id),
+            query=model.query,
+            response=model.response,
+            source_document_ids=model.source_document_ids or [],
+            created_at=model.created_at
+        )
+
     async def save(self, message: ChatMessage) -> ChatMessage:
         """Save chat message to database"""
         
@@ -28,16 +39,8 @@ class ChatRepositoryImpl(ChatRepository):
         
         self.session.add(model)
         await self.session.flush()  # Get the ID without committing
-        
-        # Convert back to entity
-        return ChatMessage(
-            id=str(model.id),
-            user_id=str(model.user_id),
-            query=model.query,
-            response=model.response,
-            source_document_ids=model.source_document_ids or [],
-            created_at=model.created_at
-        )
+
+        return self._to_entity(model)
     
     async def find_by_user_id(
         self,
@@ -54,16 +57,5 @@ class ChatRepositoryImpl(ChatRepository):
         )
         
         models = result.scalars().all()
-        
-        # Convert to entities
-        return [
-            ChatMessage(
-                id=str(model.id),
-                user_id=str(model.user_id),
-                query=model.query,
-                response=model.response,
-                source_document_ids=model.source_document_ids or [],
-                created_at=model.created_at
-            )
-            for model in models
-        ]
+
+        return [self._to_entity(model) for model in models]

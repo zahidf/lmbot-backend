@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from app.infrastructure.persistence.database import init_db
 from app.infrastructure.config.settings import get_settings
 from app.presentation.api.v1 import chatbot  # Import chatbot router
+from app.presentation.api.v1 import documents #docs
 
 settings = get_settings()
 
@@ -39,8 +40,10 @@ async def health_check():
     return {"status": "healthy"}
 
 # router
-app.include_router(chatbot.router, prefix="/api/v1")
+app.include_router(chatbot.router, prefix="/api/v1", tags=["chatbot"])
+app.include_router(documents.router, prefix="/api/v1", tags=["documents"])
+
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

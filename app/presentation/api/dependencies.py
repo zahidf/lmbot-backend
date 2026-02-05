@@ -7,7 +7,13 @@ from ...infrastructure.persistence.repositories.langchain_vector_store_repositor
     LangChainVectorStoreRepository
 )
 from ...infrastructure.persistence.repositories.chat_repository_impl import ChatRepositoryImpl
+from app.infrastructure.persistence.repositories.document_repository_impl import DocumentRepositoryImpl
 from ...application.use_cases.chatbot.process_chat_query import ProcessChatQuery
+from app.application.use_cases.documents.upload_document import UploadDocument
+from app.application.use_cases.documents.process_document import ProcessDocument
+from app.infrastructure.external_services.local_file_storage_service import LocalFileStorageService
+from app.infrastructure.external_services.document_processor_service import DocumentProcessorService
+from app.infrastructure.external_services.text_chunking_service import TextChunkerService
 from ...infrastructure.config.settings import get_settings
 
 security = HTTPBearer()
@@ -47,6 +53,21 @@ def get_llm_service() -> LangChainLLMService:
         temperature=settings.OPENAI_TEMPERATURE
     )
 
+def get_file_storage_service() -> LocalFileStorageService:
+    """Get file storage service singleton"""
+    return LocalFileStorageService()
+
+def get_document_processor_service() -> DocumentProcessorService:
+    """Get document processor service singleton"""
+    return DocumentProcessorService()
+
+
+def get_text_chunker_service() -> TextChunkerService:
+    """Get text chunker service singleton"""
+    return TextChunkerService(
+        chunk_size=settings.CHUNK_SIZE,
+        chunk_overlap=settings.CHUNK_OVERLAP
+    )
 
 # Repositories
 async def get_vector_store_repository(
@@ -62,6 +83,12 @@ async def get_chat_repository(
     """Get chat repository"""
     return ChatRepositoryImpl(session)
 
+async def get_document_repository(
+    session: AsyncSession = Depends(get_db)
+) -> DocumentRepositoryImpl:
+    """Get document repository"""
+    return DocumentRepositoryImpl(session)
+
 
 # Use Cases
 async def get_process_chat_query_use_case(
@@ -74,4 +101,31 @@ async def get_process_chat_query_use_case(
         chat_repository=chat_repo,
         vector_store_repository=vector_repo,
         llm_service=llm_service
+    )
+
+
+async def get_upload_document_use_case(
+    document_repo: DocumentRepositoryImpl = Depends(get_document_repository),
+    file_storage: LocalFileStorageService = Depends(get_file_storage_service)
+) -> UploadDocument:
+    """Get UploadDocument use case"""
+    return UploadDocument(
+        document_repository=document_repo,
+        file_storage_service=file_storage
+    )
+
+async def get_process_document_use_case(
+    document_repo: DocumentRepositoryImpl = Depends(get_document_repository),
+    vector_repo: LangChainVectorStoreRepository = Depends(get_vector_store_repository),
+    llm_service: LangChainLLMService = Depends(get_llm_service),
+    document_processor: DocumentProcessorService = Depends(get_document_processor_service),
+    text_chunker: TextChunkerService = Depends(get_text_chunker_service)
+) -> ProcessDocument:
+    """Get ProcessDocument use case"""
+    return ProcessDocument(
+        document_repository=document_repo,
+        vector_store_repository=vector_repo,
+        llm_service=llm_service,
+        document_processor=document_processor,
+        text_chunker=text_chunker
     )
