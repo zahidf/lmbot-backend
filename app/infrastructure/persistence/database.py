@@ -49,6 +49,7 @@ async def init_db():
         UserModel,
         DocumentModel,
         DocumentChunkModel,
+        ChatSessionModel,
         ChatMessageModel
     )
     

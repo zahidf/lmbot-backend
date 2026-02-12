@@ -2,6 +2,7 @@ from sqlalchemy import Column, String, Boolean, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from datetime import datetime, timezone
+from sqlalchemy.orm import relationship
 from .base import Base
 
 
@@ -16,3 +17,6 @@ class UserModel(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+
+    chat_sessions = relationship("ChatSessionModel", back_populates="user")
+    chat_messages = relationship("ChatMessageModel", back_populates="user")
