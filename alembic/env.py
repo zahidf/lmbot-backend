@@ -12,6 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.infrastructure.persistence.database import Base
 from app.infrastructure.persistence.models.document_model import DocumentModel
+from app.infrastructure.persistence.models.chat_session_model import ChatSessionModel
 from app.infrastructure.persistence.models.chat_message_model import ChatMessageModel
 from app.infrastructure.persistence.models.document_chunk_model import DocumentChunkModel
 from app.infrastructure.persistence.models.user_model import UserModel

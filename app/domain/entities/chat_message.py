@@ -9,6 +9,7 @@ class ChatMessage:
     
     id: Optional[str]
     user_id: str
+    session_id: str
     query: str
     response: str
     source_document_ids: List[str]

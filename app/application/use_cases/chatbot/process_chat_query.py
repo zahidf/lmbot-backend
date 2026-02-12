@@ -1,6 +1,9 @@
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any
+
+from app.domain.entities.chat_session import ChatSession
 from ...interfaces.repositories.chat_repository import ChatRepository
+from ...interfaces.repositories.chat_session_repository import ChatSessionRepository
 from ...interfaces.repositories.vector_store_repository import VectorStoreRepository
 from ...interfaces.services.llm_service import LLMService
 from ...dtos.chat_dtos import ChatQueryDTO, ChatResponseDTO
@@ -12,10 +15,11 @@ class ProcessChatQuery:
     Use Case: Process chat query using RAG
     
     Flow:
-    1. Generate embedding for query
-    2. Retrieve similar documents
-    3. Generate response with context
-    4. Save chat message
+    1. Create or fetch chat session
+    2. Generate embedding for query
+    3. Retrieve similar documents
+    4. Generate response with context
+    5. Save chat message linked to session
     """
     
     SIMILARITY_THRESHOLD = 0.3
@@ -24,10 +28,12 @@ class ProcessChatQuery:
     def __init__(
         self,
         chat_repository: ChatRepository,
+        chat_session_repository: ChatSessionRepository,
         vector_store_repository: VectorStoreRepository,
         llm_service: LLMService
     ):
         self.chat_repository = chat_repository
+        self.chat_session_repository = chat_session_repository
         self.vector_store_repository = vector_store_repository
         self.llm_service = llm_service
     
@@ -40,12 +46,31 @@ class ProcessChatQuery:
         Process user query and generate response
         
         Args:
-            dto: Chat query with user_id and query
+            dto: Chat query with user_id, query and optional session_id
             filters: Optional filters for retrieval
             
         Returns:
-            ChatResponseDTO with response and sources
+            ChatResponseDTO with response, sources and session_id
         """
+
+        if dto.session_id:
+            session = await self.chat_session_repository.find_by_id(dto.session_id)
+            if not session:
+                raise ValueError(f"Chat session {dto.session_id} not found")
+
+            await self.chat_session_repository.update_title(
+                session_id=session.id,
+                title=session.title or ChatSession.generate_title_from_query(dto.query)
+            )
+        else:
+            session = ChatSession(
+                id=None,
+                user_id=dto.user_id,
+                title=ChatSession.generate_title_from_query(dto.query),
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
+            )
+            session = await self.chat_session_repository.create(session)
         
         #Generate embedding for query
         query_embedding = await self.llm_service.generate_embedding(dto.query)
@@ -70,8 +95,22 @@ class ProcessChatQuery:
                 "to answer your question. Please try rephrasing or contact "
                 "the Technical Team directly."
             )
+
+            # Still save the message to the session
+            chat_message = ChatMessage(
+                id=None,
+                user_id=dto.user_id,
+                session_id=session.id,
+                query=dto.query,
+                response=response_text,
+                source_document_ids=[],
+                created_at=datetime.now(timezone.utc)
+            )
+            saved_message = await self.chat_repository.save(chat_message)
+
             return ChatResponseDTO(
                 message_id=None,
+                session_id=session.id,
                 query=dto.query,
                 response=response_text,
                 sources=[],
@@ -91,6 +130,7 @@ class ProcessChatQuery:
         chat_message = ChatMessage(
             id=None,
             user_id=dto.user_id,
+            session_id=session.id,
             query=dto.query,
             response=response,
             source_document_ids=[chunk['document_id'] for chunk in relevant_chunks],
@@ -113,6 +153,7 @@ class ProcessChatQuery:
         #Return response
         return ChatResponseDTO(
             message_id=saved_message.id,
+            session_id=session.id,
             query=dto.query,
             response=response,
             sources=sources,

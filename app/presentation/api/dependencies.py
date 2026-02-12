@@ -7,6 +7,7 @@ from ...infrastructure.persistence.repositories.langchain_vector_store_repositor
     LangChainVectorStoreRepository
 )
 from ...infrastructure.persistence.repositories.chat_repository_impl import ChatRepositoryImpl
+from ...infrastructure.persistence.repositories.chat_session_repository_impl import ChatSessionRepositoryImpl
 from app.infrastructure.persistence.repositories.document_repository_impl import DocumentRepositoryImpl
 from ...application.use_cases.chatbot.process_chat_query import ProcessChatQuery
 from app.application.use_cases.documents.upload_document import UploadDocument
@@ -28,7 +29,6 @@ async def get_current_user(
     Get current authenticated user
     TODO: Implement proper JWT validation
     """
-    # Todo: make jwt validation
     token = credentials.credentials
     if not token:
         raise HTTPException(
@@ -83,6 +83,14 @@ async def get_chat_repository(
     """Get chat repository"""
     return ChatRepositoryImpl(session)
 
+
+async def get_chat_session_repository(
+    session: AsyncSession = Depends(get_db)
+) -> ChatSessionRepositoryImpl:
+    """Get chat session repository"""
+    return ChatSessionRepositoryImpl(session)
+
+
 async def get_document_repository(
     session: AsyncSession = Depends(get_db)
 ) -> DocumentRepositoryImpl:
@@ -92,14 +100,14 @@ async def get_document_repository(
 
 # Use Cases
 async def get_process_chat_query_use_case(
-    chat_repo: ChatRepositoryImpl = Depends(get_chat_repository),
-    vector_repo: LangChainVectorStoreRepository = Depends(get_vector_store_repository),
+    session: AsyncSession = Depends(get_db),
     llm_service: LangChainLLMService = Depends(get_llm_service)
 ) -> ProcessChatQuery:
-    """Get ProcessChatQuery use case"""
+    """Get ProcessChatQuery use case - all repos share the same DB session"""
     return ProcessChatQuery(
-        chat_repository=chat_repo,
-        vector_store_repository=vector_repo,
+        chat_repository=ChatRepositoryImpl(session),
+        chat_session_repository=ChatSessionRepositoryImpl(session),
+        vector_store_repository=LangChainVectorStoreRepository(session),
         llm_service=llm_service
     )
 
