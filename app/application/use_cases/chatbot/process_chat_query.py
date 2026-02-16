@@ -4,6 +4,7 @@ from typing import Optional, Dict, Any
 from app.domain.entities.chat_session import ChatSession
 from ...interfaces.repositories.chat_repository import ChatRepository
 from ...interfaces.repositories.chat_session_repository import ChatSessionRepository
+from ...interfaces.repositories.chat_triage_repository import ChatTriageRepository
 from ...interfaces.repositories.vector_store_repository import VectorStoreRepository
 from ...interfaces.services.llm_service import LLMService
 from ...dtos.chat_dtos import ChatQueryDTO, ChatResponseDTO
@@ -16,10 +17,11 @@ class ProcessChatQuery:
     
     Flow:
     1. Create or fetch chat session
-    2. Generate embedding for query
-    3. Retrieve similar documents
-    4. Generate response with context
-    5. Save chat message linked to session
+    2. Load triage context (if available) for the session
+    3. Generate embedding for query
+    4. Retrieve similar documents (filtered by burner series if known)
+    5. Generate response with context + triage background
+    6. Save chat message linked to session
     """
     
     SIMILARITY_THRESHOLD = 0.3
@@ -29,11 +31,13 @@ class ProcessChatQuery:
         self,
         chat_repository: ChatRepository,
         chat_session_repository: ChatSessionRepository,
+        triage_repository: ChatTriageRepository,
         vector_store_repository: VectorStoreRepository,
         llm_service: LLMService
     ):
         self.chat_repository = chat_repository
         self.chat_session_repository = chat_session_repository
+        self.triage_repository = triage_repository
         self.vector_store_repository = vector_store_repository
         self.llm_service = llm_service
     
@@ -72,23 +76,33 @@ class ProcessChatQuery:
             )
             session = await self.chat_session_repository.create(session)
         
-        #Generate embedding for query
+        # Load triage context if available
+        triage_context = None
+        triage = await self.triage_repository.find_by_session_id(session.id)
+        if triage:
+            triage_context = triage.get_context_summary()
+            
+            # Auto-apply burner series filter from triage
+            if triage.burner_series and (filters is None or 'product_series' not in filters):
+                filters = filters or {}
+                filters['product_series'] = triage.burner_series
+        
+        # Generate embedding for query
         query_embedding = await self.llm_service.generate_embedding(dto.query)
         
-        #Retrieve relevant documents
+        # Retrieve relevant documents
         retrieved_chunks = await self.vector_store_repository.similarity_search(
             query_embedding=query_embedding,
             k=self.TOP_K,
             filters=filters
         )
         
-        #Filter by similarity threshold
+        # Filter by similarity threshold
         relevant_chunks = [
             chunk for chunk in retrieved_chunks
             if chunk['similarity_score'] >= self.SIMILARITY_THRESHOLD
         ]
         
-        #Handle no relevant documents
         if not relevant_chunks:
             response_text = (
                 "I couldn't find relevant information in the documentation "
@@ -96,7 +110,6 @@ class ProcessChatQuery:
                 "the Technical Team directly."
             )
 
-            # Still save the message to the session
             chat_message = ChatMessage(
                 id=None,
                 user_id=dto.user_id,
@@ -109,7 +122,7 @@ class ProcessChatQuery:
             saved_message = await self.chat_repository.save(chat_message)
 
             return ChatResponseDTO(
-                message_id=None,
+                message_id=saved_message.id,
                 session_id=session.id,
                 query=dto.query,
                 response=response_text,
@@ -117,16 +130,24 @@ class ProcessChatQuery:
                 created_at=datetime.now(timezone.utc)
             )
         
-        #Extract context for LLM
+        # Extract context
         context_documents = [chunk['content'] for chunk in relevant_chunks]
         
-        #Generate response
+        # Build query with triage context
+        enriched_query = dto.query
+        if triage_context:
+            enriched_query = (
+                f"[Customer Background from Triage]\n"
+                f"{triage_context}\n\n"
+                f"[Customer Question]\n"
+                f"{dto.query}"
+            )
+        
         response = await self.llm_service.generate_response(
-            query=dto.query,
+            query=enriched_query,
             context_documents=context_documents
         )
         
-        #Create and save chat message
         chat_message = ChatMessage(
             id=None,
             user_id=dto.user_id,
@@ -139,7 +160,6 @@ class ProcessChatQuery:
         
         saved_message = await self.chat_repository.save(chat_message)
         
-        #Format sources
         sources = [
             {
                 'document_id': chunk['document_id'],
@@ -150,7 +170,6 @@ class ProcessChatQuery:
             for chunk in relevant_chunks
         ]
         
-        #Return response
         return ChatResponseDTO(
             message_id=saved_message.id,
             session_id=session.id,

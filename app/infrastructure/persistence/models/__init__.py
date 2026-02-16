@@ -4,6 +4,7 @@ from .document_model import DocumentModel
 from .document_chunk_model import DocumentChunkModel
 from .chat_message_model import ChatMessageModel
 from .chat_session_model import ChatSessionModel
+from .chat_triage_model import ChatTriageModel
 
 __all__ = [
     'Base',
@@ -11,5 +12,6 @@ __all__ = [
     'DocumentModel',
     'DocumentChunkModel',
     'ChatSessionModel',
-    'ChatMessageModel'
+    'ChatMessageModel',
+    'ChatTriageModel',
 ]

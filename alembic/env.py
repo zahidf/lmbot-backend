@@ -16,6 +16,7 @@ from app.infrastructure.persistence.models.chat_session_model import ChatSession
 from app.infrastructure.persistence.models.chat_message_model import ChatMessageModel
 from app.infrastructure.persistence.models.document_chunk_model import DocumentChunkModel
 from app.infrastructure.persistence.models.user_model import UserModel
+from app.infrastructure.persistence.models.chat_triage_model import ChatTriageModel
 
 
 # this is the Alembic Config object, which provides

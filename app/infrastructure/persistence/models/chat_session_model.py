@@ -18,3 +18,4 @@ class ChatSessionModel(Base):
 
     user = relationship("UserModel", back_populates="chat_sessions")
     messages = relationship("ChatMessageModel", back_populates="session", cascade="all, delete-orphan")
+    triage = relationship("ChatTriageModel", back_populates="session", uselist=False, cascade="all, delete-orphan")
