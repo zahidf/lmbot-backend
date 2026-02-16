@@ -8,8 +8,10 @@ from ...infrastructure.persistence.repositories.langchain_vector_store_repositor
 )
 from ...infrastructure.persistence.repositories.chat_repository_impl import ChatRepositoryImpl
 from ...infrastructure.persistence.repositories.chat_session_repository_impl import ChatSessionRepositoryImpl
+from ...infrastructure.persistence.repositories.chat_triage_repository_impl import ChatTriageRepositoryImpl
 from app.infrastructure.persistence.repositories.document_repository_impl import DocumentRepositoryImpl
 from ...application.use_cases.chatbot.process_chat_query import ProcessChatQuery
+from ...application.use_cases.chatbot.submit_triage import SubmitTriage
 from app.application.use_cases.documents.upload_document import UploadDocument
 from app.application.use_cases.documents.process_document import ProcessDocument
 from app.infrastructure.external_services.local_file_storage_service import LocalFileStorageService
@@ -91,6 +93,13 @@ async def get_chat_session_repository(
     return ChatSessionRepositoryImpl(session)
 
 
+async def get_chat_triage_repository(
+    session: AsyncSession = Depends(get_db)
+) -> ChatTriageRepositoryImpl:
+    """Get chat triage repository"""
+    return ChatTriageRepositoryImpl(session)
+
+
 async def get_document_repository(
     session: AsyncSession = Depends(get_db)
 ) -> DocumentRepositoryImpl:
@@ -107,8 +116,19 @@ async def get_process_chat_query_use_case(
     return ProcessChatQuery(
         chat_repository=ChatRepositoryImpl(session),
         chat_session_repository=ChatSessionRepositoryImpl(session),
+        triage_repository=ChatTriageRepositoryImpl(session),
         vector_store_repository=LangChainVectorStoreRepository(session),
         llm_service=llm_service
+    )
+
+
+async def get_submit_triage_use_case(
+    session: AsyncSession = Depends(get_db),
+) -> SubmitTriage:
+    """Get SubmitTriage use case"""
+    return SubmitTriage(
+        triage_repository=ChatTriageRepositoryImpl(session),
+        session_repository=ChatSessionRepositoryImpl(session),
     )
 
 
