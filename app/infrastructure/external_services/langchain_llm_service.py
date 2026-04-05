@@ -11,7 +11,7 @@ class LangChainLLMService(LLMService):
     def __init__(
         self,
         openai_api_key: str,
-        model: str = "gpt-4",
+        model: str = "gpt-5-nano",
         embedding_model: str = "text-embedding-3-small",
         temperature: float = 0.7
     ):
