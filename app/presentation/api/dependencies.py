@@ -40,7 +40,7 @@ async def get_current_user(
     
     # Mock user for testing
     return {
-        "id": "d5f5d537-cf95-47bc-85f1-007206a64477",
+        "id": "4ecd20df-5594-4861-b40f-58fdda198b18",
         "email": "user@example.com"
     }
 
