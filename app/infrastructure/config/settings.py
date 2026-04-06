@@ -35,7 +35,10 @@ class Settings(BaseSettings):
     CHUNK_OVERLAP: int = 200
     TOP_K_DOCUMENTS: int = 5
     SIMILARITY_THRESHOLD: float = 0.7
-    VECTOR_DIMENSION: int = 1536  # OpenAI embedding dimension
+    VECTOR_DIMENSION: int = 1536
+    SEMANTIC_CHUNKING_BREAKPOINT_THRESHOLD_TYPE: str = "percentile"
+    SEMANTIC_CHUNKING_BREAKPOINT_THRESHOLD: float = 95.0
+    SEMANTIC_CHUNKING_MIN_CHUNK_SIZE: int = 100
     
     # CORS
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001"

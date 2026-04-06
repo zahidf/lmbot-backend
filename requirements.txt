@@ -23,6 +23,7 @@ langchain-community==0.4.1
 langchain-openai==1.1.7
 langchain-postgres==0.0.16
 langchain-text-splitters==1.1.0
+langchain-experimental==0.4.1
 
 # Email
 aiosmtplib==3.0.1
