@@ -16,7 +16,7 @@ from app.application.use_cases.documents.upload_document import UploadDocument
 from app.application.use_cases.documents.process_document import ProcessDocument
 from app.infrastructure.external_services.local_file_storage_service import LocalFileStorageService
 from app.infrastructure.external_services.document_processor_service import DocumentProcessorService
-from app.infrastructure.external_services.text_chunking_service import TextChunkerService
+from app.infrastructure.external_services.semantic_text_chunking_service import SemanticTextChunkerService
 from ...infrastructure.config.settings import get_settings
 
 security = HTTPBearer()
@@ -64,11 +64,14 @@ def get_document_processor_service() -> DocumentProcessorService:
     return DocumentProcessorService()
 
 
-def get_text_chunker_service() -> TextChunkerService:
-    """Get text chunker service singleton"""
-    return TextChunkerService(
-        chunk_size=settings.CHUNK_SIZE,
-        chunk_overlap=settings.CHUNK_OVERLAP
+def get_text_chunker_service(
+    llm_service: LangChainLLMService = Depends(get_llm_service),
+) -> SemanticTextChunkerService:
+    return SemanticTextChunkerService(
+        embeddings=llm_service.embeddings,
+        breakpoint_threshold_type=settings.SEMANTIC_CHUNKING_BREAKPOINT_THRESHOLD_TYPE,
+        breakpoint_threshold_amount=settings.SEMANTIC_CHUNKING_BREAKPOINT_THRESHOLD,
+        min_chunk_size=settings.SEMANTIC_CHUNKING_MIN_CHUNK_SIZE,
     )
 
 # Repositories
@@ -147,7 +150,7 @@ async def get_process_document_use_case(
     vector_repo: LangChainVectorStoreRepository = Depends(get_vector_store_repository),
     llm_service: LangChainLLMService = Depends(get_llm_service),
     document_processor: DocumentProcessorService = Depends(get_document_processor_service),
-    text_chunker: TextChunkerService = Depends(get_text_chunker_service)
+    text_chunker: SemanticTextChunkerService = Depends(get_text_chunker_service)
 ) -> ProcessDocument:
     """Get ProcessDocument use case"""
     return ProcessDocument(
