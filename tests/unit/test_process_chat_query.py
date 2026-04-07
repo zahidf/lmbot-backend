@@ -1,14 +1,15 @@
 import pytest
-from datetime import datetime
+from datetime import datetime, UTC
 from unittest.mock import AsyncMock, MagicMock
 from app.application.use_cases.chatbot.process_chat_query import ProcessChatQuery
 from app.application.dtos.chat_dtos import ChatQueryDTO, ChatResponseDTO
 from app.domain.entities.chat_message import ChatMessage
+from app.domain.entities.chat_session import ChatSession
 
 
 class TestProcessChatQuery:
     """Test ProcessChatQuery use case"""
-    
+
     @pytest.fixture
     def mock_chat_repository(self):
         """Mock chat repository"""
@@ -16,13 +17,34 @@ class TestProcessChatQuery:
         repo.save.return_value = ChatMessage(
             id="msg-123",
             user_id="user-123",
+            session_id="session-123",
             query="What is task decomposition?",
             response="Task decomposition is a technique...",
             source_document_ids=["doc-1", "doc-2"],
-            created_at=datetime.utcnow()
+            created_at=datetime.now(UTC)
         )
         return repo
-    
+
+    @pytest.fixture
+    def mock_chat_session_repository(self):
+        """Mock chat session repository"""
+        repo = AsyncMock()
+        repo.create.return_value = ChatSession(
+            id="session-123",
+            user_id="user-123",
+            title="What is task decomposition?",
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC)
+        )
+        return repo
+
+    @pytest.fixture
+    def mock_triage_repository(self):
+        """Mock triage repository"""
+        repo = AsyncMock()
+        repo.find_by_session_id.return_value = None
+        return repo
+
     @pytest.fixture
     def mock_vector_store(self):
         """Mock vector store repository"""
@@ -44,7 +66,7 @@ class TestProcessChatQuery:
             }
         ]
         return repo
-    
+
     @pytest.fixture
     def mock_llm_service(self):
         """Mock LLM service"""
@@ -56,12 +78,14 @@ class TestProcessChatQuery:
             "like Chain of Thought."
         )
         return service
-    
+
     @pytest.fixture
-    def use_case(self, mock_chat_repository, mock_vector_store, mock_llm_service):
+    def use_case(self, mock_chat_repository, mock_chat_session_repository, mock_triage_repository, mock_vector_store, mock_llm_service):
         """Create use case with mocked dependencies"""
         return ProcessChatQuery(
             chat_repository=mock_chat_repository,
+            chat_session_repository=mock_chat_session_repository,
+            triage_repository=mock_triage_repository,
             vector_store_repository=mock_vector_store,
             llm_service=mock_llm_service
         )
@@ -96,17 +120,17 @@ class TestProcessChatQuery:
         # Arrange
         mock_vector_store.similarity_search.return_value = [
             {"id": "1", "document_id": "doc-1", "content": "High relevance", "similarity_score": 0.85, "metadata": {}},
-            {"id": "2", "document_id": "doc-2", "content": "Low relevance", "similarity_score": 0.50, "metadata": {}},
+            {"id": "2", "document_id": "doc-2", "content": "Low relevance", "similarity_score": 0.20, "metadata": {}},
         ]
-        
+
         dto = ChatQueryDTO(user_id="user-123", query="Test query")
-        
+
         # Act
         result = await use_case.execute(dto)
-        
-        # Assert - should only include high similarity sources
+
+        # Assert - should only include sources above SIMILARITY_THRESHOLD (0.3)
         assert len(result.sources) == 1
-        assert result.sources[0]["similarity_score"] >= 0.7
+        assert result.sources[0]["similarity_score"] >= 0.3
     
     @pytest.mark.asyncio
     async def test_process_query_no_relevant_documents(self, use_case, mock_vector_store):
