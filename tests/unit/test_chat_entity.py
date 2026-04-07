@@ -1,5 +1,5 @@
 import pytest
-from datetime import datetime
+from datetime import datetime, UTC
 from app.domain.entities.chat_message import ChatMessage
 
 
@@ -11,12 +11,13 @@ class TestChatMessage:
         message = ChatMessage(
             id="test-id",
             user_id="user-123",
+            session_id="session-123",
             query="What is task decomposition?",
             response="Task decomposition is...",
             source_document_ids=["doc-1", "doc-2"],
-            created_at=datetime.utcnow()
+            created_at=datetime.now(UTC)
         )
-        
+
         assert message.id == "test-id"
         assert message.user_id == "user-123"
         assert message.query == "What is task decomposition?"
@@ -27,12 +28,13 @@ class TestChatMessage:
         message = ChatMessage(
             id="test-id",
             user_id="user-123",
+            session_id="session-123",
             query="Test query",
             response="Test response",
             source_document_ids=["doc-1"],
-            created_at=datetime.utcnow()
+            created_at=datetime.now(UTC)
         )
-        
+
         assert message.has_sources() is True
     
     def test_no_sources(self):
@@ -40,10 +42,11 @@ class TestChatMessage:
         message = ChatMessage(
             id="test-id",
             user_id="user-123",
+            session_id="session-123",
             query="Test query",
             response="Test response",
             source_document_ids=[],
-            created_at=datetime.utcnow()
+            created_at=datetime.now(UTC)
         )
-        
+
         assert message.has_sources() is False
