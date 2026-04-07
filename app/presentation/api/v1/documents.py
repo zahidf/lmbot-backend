@@ -225,7 +225,7 @@ async def process_document(
     
     This endpoint:
     1. Extracts text from the uploaded document
-    2. Splits text into chunks (1000 chars with 200 overlap)
+    2. Splits text into semantic chunks
     3. Generates embeddings for each chunk
     4. Stores chunks in vector database
     5. Marks document as processed

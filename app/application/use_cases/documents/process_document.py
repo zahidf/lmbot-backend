@@ -4,7 +4,7 @@ from app.application.interfaces.repositories.document_repository import Document
 from app.infrastructure.persistence.repositories.langchain_vector_store_repository import LangChainVectorStoreRepository
 from app.application.interfaces.services.llm_service import LLMService
 from app.infrastructure.external_services.document_processor_service import DocumentProcessorService
-from app.infrastructure.external_services.text_chunking_service import TextChunkerService
+from app.infrastructure.external_services.text_chunking_service import SemanticTextChunkerService
 import logging
 import uuid
 
@@ -30,7 +30,7 @@ class ProcessDocument:
         vector_store_repository: LangChainVectorStoreRepository,
         llm_service: LLMService,
         document_processor: DocumentProcessorService,
-        text_chunker: TextChunkerService
+        text_chunker: SemanticTextChunkerService
     ):
         self.document_repository = document_repository
         self.vector_store_repository = vector_store_repository
