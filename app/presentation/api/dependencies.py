@@ -72,6 +72,8 @@ def get_text_chunker_service(
         breakpoint_threshold_type=settings.SEMANTIC_CHUNKING_BREAKPOINT_THRESHOLD_TYPE,
         breakpoint_threshold_amount=settings.SEMANTIC_CHUNKING_BREAKPOINT_THRESHOLD,
         min_chunk_size=settings.SEMANTIC_CHUNKING_MIN_CHUNK_SIZE,
+        max_chunk_size=settings.SEMANTIC_CHUNKING_MAX_CHUNK_SIZE,
+        chunk_overlap=settings.SEMANTIC_CHUNKING_CHUNK_OVERLAP,
     )
 
 # Repositories

@@ -1,5 +1,5 @@
 """
-Step 2: Run a RAG experiment against a Langfuse Dataset.
+Run a RAG experiment against a Langfuse Dataset.
 
 Each run is grouped under a named experiment.
 
