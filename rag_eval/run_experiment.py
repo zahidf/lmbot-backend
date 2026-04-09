@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from langfuse import get_client, Evaluation
-from openai import AsyncOpenAI
+from langfuse.openai import AsyncOpenAI
 from ragas.embeddings import OpenAIEmbeddings
 from ragas.llms import llm_factory
 from ragas.metrics.collections import AnswerCorrectness, ContextRecall, Faithfulness

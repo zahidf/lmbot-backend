@@ -163,7 +163,7 @@ class ProcessChatQuery:
         sources = [
             {
                 'document_id': chunk['document_id'],
-                'content': chunk['content'][:200] + "...",
+                'content': chunk['content'],
                 'similarity_score': chunk['similarity_score'],
                 'metadata': chunk['metadata']
             }
