@@ -7,10 +7,8 @@ from typing import Optional
 class DocumentUpload:
     """Document upload entity"""
     
-    # Allowed file types
     ALLOWED_FILE_TYPES = ["pdf", "docx", "doc", "txt"]
     
-    # Maximum file size (50 MB)
     MAX_FILE_SIZE = 50 * 1024 * 1024
     
     id: Optional[str]
