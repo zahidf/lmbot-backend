@@ -28,7 +28,12 @@ class ChatTriage:
         "G": "Something Else",
     }
     
-    BURNER_SERIES = ["FD", "TX", "DB", "FDB"]
+    BURNER_SERIES = {
+        "FD": "FD Series",
+        "TX": "TX Series",
+        "DB": "DB Series",
+        "FDB": "FDB Series",
+    }
     
     id: Optional[str]
     session_id: str

@@ -1,11 +1,11 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from typing import List, Optional
 from datetime import datetime
 
 
 class ChatQueryRequest(BaseModel):
     """Chat query request schema"""
-    query: str
+    query: str = Field(min_length=1, max_length=2000)
     session_id: Optional[str] = None  # None = create new chat session
     
     model_config = ConfigDict(

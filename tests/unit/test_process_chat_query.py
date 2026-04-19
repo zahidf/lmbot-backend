@@ -151,12 +151,65 @@ class TestProcessChatQuery:
         """Test that chat message is saved to repository"""
         # Arrange
         dto = ChatQueryDTO(user_id="user-123", query="Test query")
-        
+
         # Act
         await use_case.execute(dto)
-        
+
         # Assert
         mock_chat_repository.save.assert_called_once()
         saved_message = mock_chat_repository.save.call_args[0][0]
         assert saved_message.user_id == "user-123"
         assert saved_message.query == "Test query"
+
+    @pytest.mark.asyncio
+    async def test_process_query_session_not_found(
+        self, use_case, mock_chat_session_repository
+    ):
+        """Providing a session_id that doesn't exist raises ValueError"""
+        mock_chat_session_repository.find_by_id.return_value = None
+
+        dto = ChatQueryDTO(
+            user_id="user-123",
+            query="Test query",
+            session_id="nonexistent-session-id",
+        )
+
+        with pytest.raises(ValueError, match="not found"):
+            await use_case.execute(dto)
+
+    @pytest.mark.asyncio
+    async def test_process_query_triage_applies_burner_filter(
+        self, use_case, mock_triage_repository, mock_vector_store
+    ):
+        """Triage with a burner_series auto-applies product_series filter to the search"""
+        triage = MagicMock()
+        triage.burner_series = "TX"
+        triage.get_context_summary.return_value = "Burner Model: TX Series"
+        mock_triage_repository.find_by_session_id.return_value = triage
+
+        dto = ChatQueryDTO(user_id="user-123", query="How to install TX burner?")
+        await use_case.execute(dto)
+
+        call_kwargs = mock_vector_store.similarity_search.call_args.kwargs
+        assert call_kwargs["filters"]["product_series"] == "TX"
+
+    @pytest.mark.asyncio
+    async def test_process_query_triage_context_enriches_prompt(
+        self, use_case, mock_triage_repository, mock_llm_service
+    ):
+        """When triage context exists, the LLM is called with an enriched prompt"""
+        triage = MagicMock()
+        triage.burner_series = "FD"
+        triage.get_context_summary.return_value = (
+            "Burner Model: FD Series\nIssue Category: Burner Starts Then Locks Out"
+        )
+        mock_triage_repository.find_by_session_id.return_value = triage
+
+        dto = ChatQueryDTO(user_id="user-123", query="Why is my burner locking out?")
+        await use_case.execute(dto)
+
+        call_kwargs = mock_llm_service.generate_response.call_args.kwargs
+        enriched = call_kwargs["query"]
+        assert "[Customer Background from Triage]" in enriched
+        assert "Burner Model: FD Series" in enriched
+        assert "[Customer Question]" in enriched

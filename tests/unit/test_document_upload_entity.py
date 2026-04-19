@@ -1,5 +1,5 @@
 import pytest
-from datetime import datetime
+from datetime import datetime, UTC
 from app.domain.entities.document_upload import DocumentUpload
 
 
@@ -20,7 +20,7 @@ class TestDocumentUpload:
             uploaded_by="user-123",
             is_processed=False,
             chunk_count=0,
-            created_at=datetime.utcnow()
+            created_at=datetime.now(UTC)
         )
         
         assert doc.title == "TX Series Manual"
@@ -44,7 +44,7 @@ class TestDocumentUpload:
             uploaded_by="user-123",
             is_processed=False,
             chunk_count=0,
-            created_at=datetime.utcnow()
+            created_at=datetime.now(UTC)
         )
         
         assert doc.is_valid_file_type() is True
@@ -63,7 +63,7 @@ class TestDocumentUpload:
             uploaded_by="user-123",
             is_processed=False,
             chunk_count=0,
-            created_at=datetime.utcnow()
+            created_at=datetime.now(UTC)
         )
         
         assert doc.is_valid_file_type() is True
@@ -82,7 +82,7 @@ class TestDocumentUpload:
             uploaded_by="user-123",
             is_processed=False,
             chunk_count=0,
-            created_at=datetime.utcnow()
+            created_at=datetime.now(UTC)
         )
         
         assert doc.is_valid_file_type() is True
@@ -101,7 +101,7 @@ class TestDocumentUpload:
             uploaded_by="user-123",
             is_processed=False,
             chunk_count=0,
-            created_at=datetime.utcnow()
+            created_at=datetime.now(UTC)
         )
         
         assert doc.is_valid_file_type() is False
@@ -120,7 +120,7 @@ class TestDocumentUpload:
             uploaded_by="user-123",
             is_processed=False,
             chunk_count=0,
-            created_at=datetime.utcnow()
+            created_at=datetime.now(UTC)
         )
         
         assert doc.is_valid_file_size() is True
@@ -139,7 +139,7 @@ class TestDocumentUpload:
             uploaded_by="user-123",
             is_processed=False,
             chunk_count=0,
-            created_at=datetime.utcnow()
+            created_at=datetime.now(UTC)
         )
         
         assert doc.is_valid_file_size() is False
@@ -158,7 +158,7 @@ class TestDocumentUpload:
             uploaded_by="user-123",
             is_processed=False,
             chunk_count=0,
-            created_at=datetime.utcnow()
+            created_at=datetime.now(UTC)
         )
         
         doc.mark_as_processed(chunk_count=10)
