@@ -42,9 +42,9 @@ class UploadDocument:
         file_type = self._extract_file_type(file_name)
         file_size = dto.file.size if hasattr(dto.file, 'size') else len(await dto.file.read())
         
-        # Reset file pointer if we read it for size (seek is synchronous in FastAPI)
+        # Reset file pointer if we read it for size
         if hasattr(dto.file, 'seek') and file_size > 0:
-            dto.file.seek(0)
+            await dto.file.seek(0)
         
         document = DocumentUpload(
             id=None,

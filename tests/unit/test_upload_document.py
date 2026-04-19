@@ -42,7 +42,8 @@ class TestUploadDocument:
         """Test successful document upload"""
         # Arrange
         mock_file = Mock()
-        mock_file.filename = "tx_manual.pdf"
+        mock_file.seek = AsyncMock()
+        mock_file.filename ="tx_manual.pdf"
         mock_file.content_type = "application/pdf"
         mock_file.size = 1024000
         mock_file.read = AsyncMock(return_value=b"PDF content")
@@ -75,7 +76,8 @@ class TestUploadDocument:
         """Test upload with invalid file type"""
         # Arrange
         mock_file = Mock()
-        mock_file.filename = "malware.exe"
+        mock_file.seek = AsyncMock()
+        mock_file.filename ="malware.exe"
         mock_file.content_type = "application/x-executable"
         mock_file.size = 1000
         
@@ -96,7 +98,8 @@ class TestUploadDocument:
         """Test upload with file too large"""
         # Arrange
         mock_file = Mock()
-        mock_file.filename = "large.pdf"
+        mock_file.seek = AsyncMock()
+        mock_file.filename ="large.pdf"
         mock_file.content_type = "application/pdf"
         mock_file.size = 60 * 1024 * 1024  # 60 MB
         
@@ -117,7 +120,8 @@ class TestUploadDocument:
         """Test upload with optional metadata"""
         # Arrange
         mock_file = Mock()
-        mock_file.filename = "guide.pdf"
+        mock_file.seek = AsyncMock()
+        mock_file.filename ="guide.pdf"
         mock_file.content_type = "application/pdf"
         mock_file.size = 500000
         mock_file.read = AsyncMock(return_value=b"PDF content")
@@ -143,7 +147,8 @@ class TestUploadDocument:
         """Test uploading DOCX file"""
         # Arrange
         mock_file = Mock()
-        mock_file.filename = "manual.docx"
+        mock_file.seek = AsyncMock()
+        mock_file.filename ="manual.docx"
         mock_file.content_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         mock_file.size = 800000
         mock_file.read = AsyncMock(return_value=b"DOCX content")
@@ -168,7 +173,8 @@ class TestUploadDocument:
         """Test uploading TXT file"""
         # Arrange
         mock_file = Mock()
-        mock_file.filename = "notes.txt"
+        mock_file.seek = AsyncMock()
+        mock_file.filename ="notes.txt"
         mock_file.content_type = "text/plain"
         mock_file.size = 5000
         mock_file.read = AsyncMock(return_value=b"Text content")

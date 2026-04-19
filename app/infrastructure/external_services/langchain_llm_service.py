@@ -7,7 +7,21 @@ from app.application.interfaces.services.llm_service import LLMService
 
 class LangChainLLMService(LLMService):
     """LangChain implementation of LLM service"""
-    
+
+    GAS_SAFETY_KEYWORDS = [
+        "commissioning", "gas valve", "gas train", "electrode",
+        "pressure test", "leak test", "installation procedure",
+        "gas pressure", "pilot gas", "isolat", "gas cock",
+        "burner head", "gas supply",
+    ]
+
+    GAS_SAFETY_DISCLAIMER = (
+        "\n\n⚠ This guidance is for reference by qualified engineers only. "
+        "Gas appliance work must be carried out by a Gas Safe registered engineer."
+    )
+
+    DISCLAIMER_INDICATORS = ["gas safe", "qualified engineer", "registered engineer"]
+
     def __init__(
         self,
         openai_api_key: str,
@@ -66,7 +80,20 @@ Guidelines:
 2. If the answer is not in the context, say "I don't have enough information to answer that" (NOTHING ELSE)
 3. Be specific and reference relevant information
 4. Use technical terminology appropriately
-5. Provide safety warnings when relevant 
+5. SAFETY — REGULATED GAS WORK:
+   Certain tasks (commissioning, installation, gas train adjustments, gas valve
+   settings, pressure testing, leak testing, electrode replacement) are legally
+   restricted to Gas Safe / ACS registered engineers in the UK and equivalently
+   qualified personnel elsewhere. When your response covers any of these tasks:
+   a) State clearly that the work MUST be carried out by a qualified Gas Safe
+      registered engineer
+   b) Frame procedures as reference information for qualified personnel, not as
+      DIY instructions
+   c) Include this disclaimer at the END of the response:
+      "⚠ This guidance is for reference by qualified engineers only. Gas
+      appliance work must be carried out by a Gas Safe registered engineer."
+   d) Do NOT refuse to answer — the documentation is useful reference material
+      for engineers — but always include the qualification requirement
 
 Product Lines:
 - TX Series: High-efficiency industrial burners
@@ -100,4 +127,19 @@ Provide a helpful, accurate response based on the documentation.""")
             "query": query
         })
         
+        response = self._ensure_safety_disclaimer(response)
         return response
+
+    def _ensure_safety_disclaimer(self, response: str) -> str:
+        """
+        Deterministic fallback that appends a gas safety disclaimer
+        if the response covers regulated work but the LLM omitted it.
+        """
+        lower = response.lower()
+        has_regulated_content = any(kw in lower for kw in self.GAS_SAFETY_KEYWORDS)
+        if not has_regulated_content:
+            return response
+        has_disclaimer = any(ind in lower for ind in self.DISCLAIMER_INDICATORS)
+        if has_disclaimer:
+            return response
+        return response + self.GAS_SAFETY_DISCLAIMER

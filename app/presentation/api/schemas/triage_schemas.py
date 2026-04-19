@@ -92,7 +92,7 @@ class TriageFollowUpsResponse(BaseModel):
 
 class TriageConfigResponse(BaseModel):
     """Full triage configuration for frontend rendering"""
-    burner_series: List[str]
+    burner_series: Dict[str, str]
     issue_categories: Dict[str, str]
     serial_number_example: str
     serial_number_tooltip: str
