@@ -14,8 +14,10 @@ from ..dependencies import (
     get_current_user,
     get_process_chat_query_use_case,
     get_chat_repository,
-    get_chat_session_repository
+    get_chat_session_repository,
+    get_vector_store_repository
 )
+from ....infrastructure.persistence.repositories.langchain_vector_store_repository import LangChainVectorStoreRepository
 from ....application.use_cases.chatbot.process_chat_query import ProcessChatQuery
 from ....application.dtos.chat_dtos import ChatQueryDTO
 from ....application.interfaces.repositories.chat_repository import ChatRepository
@@ -128,11 +130,12 @@ async def get_chat_session(
     session_id: str,
     current_user=Depends(get_current_user),
     session_repo: ChatSessionRepositoryImpl = Depends(get_chat_session_repository),
-    chat_repo: ChatRepository = Depends(get_chat_repository)
+    chat_repo: ChatRepository = Depends(get_chat_repository),
+    vector_repo: LangChainVectorStoreRepository = Depends(get_vector_store_repository)
 ):
     """
     Get a chat session with all its messages.
-    
+
     - **session_id**: UUID of the chat session
     """
     try:
@@ -142,17 +145,24 @@ async def get_chat_session(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Chat session not found"
             )
-        
+
         # Verify ownership
         if session.user_id != current_user["id"]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied"
             )
-        
+
         # Get messages for this session
         messages = await chat_repo.find_by_session_id(session_id)
-        
+
+        # Collect all chunk IDs across all messages and fetch in one query
+        all_chunk_ids = [cid for msg in messages for cid in (msg.source_document_ids or [])]
+        chunks_by_id = {}
+        if all_chunk_ids:
+            chunks = await vector_repo.get_chunks_by_ids(all_chunk_ids)
+            chunks_by_id = {chunk['id']: chunk for chunk in chunks}
+
         return ChatSessionDetailResponse(
             id=session.id,
             title=session.title,
@@ -162,7 +172,16 @@ async def get_chat_session(
                     session_id=msg.session_id,
                     query=msg.query,
                     response=msg.response,
-                    sources=[],  # Sources not stored on message entity
+                    sources=[
+                        ChatSourceResponse(
+                            document_id=chunks_by_id[cid]['document_id'],
+                            content=chunks_by_id[cid]['content'],
+                            similarity_score=0.0,
+                            metadata=chunks_by_id[cid]['metadata']
+                        )
+                        for cid in (msg.source_document_ids or [])
+                        if cid in chunks_by_id
+                    ],
                     created_at=msg.created_at
                 )
                 for msg in messages
@@ -276,22 +295,29 @@ async def delete_chat_session(
 async def get_chat_history(
     limit: int = 10,
     current_user=Depends(get_current_user),
-    chat_repository: ChatRepository = Depends(get_chat_repository)
+    chat_repository: ChatRepository = Depends(get_chat_repository),
+    vector_repo: LangChainVectorStoreRepository = Depends(get_vector_store_repository)
 ):
     """
     Get recent chat history for current user (across all sessions).
-    
+
     - **limit**: Number of messages to retrieve (default: 10, max: 50)
     """
     try:
         if limit > 50:
             limit = 50
-        
+
         messages = await chat_repository.find_by_user_id(
             user_id=current_user["id"],
             limit=limit
         )
-        
+
+        all_chunk_ids = [cid for msg in messages for cid in (msg.source_document_ids or [])]
+        chunks_by_id = {}
+        if all_chunk_ids:
+            chunks = await vector_repo.get_chunks_by_ids(all_chunk_ids)
+            chunks_by_id = {chunk['id']: chunk for chunk in chunks}
+
         return ChatHistoryResponse(
             messages=[
                 ChatResponse(
@@ -299,7 +325,16 @@ async def get_chat_history(
                     session_id=msg.session_id,
                     query=msg.query,
                     response=msg.response,
-                    sources=[],
+                    sources=[
+                        ChatSourceResponse(
+                            document_id=chunks_by_id[cid]['document_id'],
+                            content=chunks_by_id[cid]['content'],
+                            similarity_score=0.0,
+                            metadata=chunks_by_id[cid]['metadata']
+                        )
+                        for cid in (msg.source_document_ids or [])
+                        if cid in chunks_by_id
+                    ],
                     created_at=msg.created_at
                 )
                 for msg in messages

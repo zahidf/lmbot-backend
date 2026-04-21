@@ -154,7 +154,7 @@ class ProcessChatQuery:
             session_id=session.id,
             query=dto.query,
             response=response,
-            source_document_ids=[chunk['document_id'] for chunk in relevant_chunks],
+            source_document_ids=[chunk['id'] for chunk in relevant_chunks],
             created_at=datetime.now(timezone.utc)
         )
         

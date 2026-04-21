@@ -24,3 +24,19 @@ class VectorStoreRepository(ABC):
             List of matching document chunks with metadata
         """
         pass
+
+    @abstractmethod
+    async def get_chunks_by_ids(
+        self,
+        chunk_ids: List[str]
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch specific chunks by their IDs
+
+        Args:
+            chunk_ids: List of chunk UUIDs
+
+        Returns:
+            List of chunks with content and metadata, in the same shape as similarity_search results
+        """
+        pass
