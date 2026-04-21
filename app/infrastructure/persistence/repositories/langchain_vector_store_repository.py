@@ -80,6 +80,41 @@ class LangChainVectorStoreRepository(VectorStoreRepository):
         
         return results
     
+    async def get_chunks_by_ids(
+        self,
+        chunk_ids: List[str]
+    ) -> List[Dict[str, Any]]:
+        """Fetch specific chunks by their chunk IDs"""
+        if not chunk_ids:
+            return []
+
+        raw_connection = await self.session.connection()
+        asyncpg_connection = await raw_connection.get_raw_connection()
+
+        rows = await asyncpg_connection.driver_connection.fetch(
+            """
+            SELECT
+                id::text as chunk_id,
+                document_id::text,
+                content,
+                chunk_metadata
+            FROM document_chunks
+            WHERE id = ANY($1::uuid[])
+            """,
+            chunk_ids
+        )
+
+        return [
+            {
+                'id': row['chunk_id'],
+                'document_id': row['document_id'],
+                'content': row['content'],
+                'metadata': dict(row['chunk_metadata']) if row['chunk_metadata'] else {},
+                'similarity_score': None
+            }
+            for row in rows
+        ]
+
     async def add_documents(
         self,
         documents: List[Dict[str, Any]]
