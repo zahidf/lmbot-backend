@@ -130,6 +130,24 @@ Provide a helpful, accurate response based on the documentation.""")
         response = self._ensure_safety_disclaimer(response)
         return response
 
+    async def generate_summary(self, messages: List[dict]) -> str:
+        """Generate a concise 2–3 sentence summary of a chat session for ticket escalation"""
+        conversation = "\n".join(
+            f"Customer: {m['query']}\nBot: {m['response']}"
+            for m in messages
+        )
+
+        prompt = ChatPromptTemplate.from_messages([
+            ("system",
+             "You are a technical support assistant. Summarise the following customer support "
+             "conversation in 2–3 concise sentences, focusing on the customer's issue and what "
+             "the bot was unable to resolve. Be brief and factual."),
+            ("human", "{conversation}")
+        ])
+
+        chain = prompt | self.llm | StrOutputParser()
+        return await chain.ainvoke({"conversation": conversation})
+
     def _ensure_safety_disclaimer(self, response: str) -> str:
         """
         Deterministic fallback that appends a gas safety disclaimer

@@ -6,6 +6,7 @@ from app.infrastructure.config.settings import get_settings
 from app.presentation.api.v1 import chatbot
 from app.presentation.api.v1 import documents
 from app.presentation.api.v1 import triage
+from app.presentation.api.v1 import tickets
 
 settings = get_settings()
 
@@ -44,6 +45,7 @@ async def health_check():
 app.include_router(chatbot.router, prefix="/api/v1", tags=["chatbot"])
 app.include_router(documents.router, prefix="/api/v1", tags=["documents"])
 app.include_router(triage.router, prefix="/api/v1", tags=["triage"])
+app.include_router(tickets.router, prefix="/api/v1", tags=["tickets"])
 
 
 if __name__ == "__main__":

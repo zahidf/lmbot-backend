@@ -19,3 +19,12 @@ class ChatRepository(ABC):
     ) -> List[ChatMessage]:
         """Get chat history for user"""
         pass
+
+    @abstractmethod
+    async def find_by_session_id(
+        self,
+        session_id: str,
+        limit: int = 50
+    ) -> List[ChatMessage]:
+        """Get all messages for a session in chronological order"""
+        pass

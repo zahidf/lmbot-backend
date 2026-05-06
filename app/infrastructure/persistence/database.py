@@ -50,7 +50,10 @@ async def init_db():
         DocumentModel,
         DocumentChunkModel,
         ChatSessionModel,
-        ChatMessageModel
+        ChatMessageModel,
+        ChatTriageModel,
+        TicketModel,
+        TicketActivityModel,
     )
     
     async with engine.begin() as conn:

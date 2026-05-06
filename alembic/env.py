@@ -17,6 +17,8 @@ from app.infrastructure.persistence.models.chat_message_model import ChatMessage
 from app.infrastructure.persistence.models.document_chunk_model import DocumentChunkModel
 from app.infrastructure.persistence.models.user_model import UserModel
 from app.infrastructure.persistence.models.chat_triage_model import ChatTriageModel
+from app.infrastructure.persistence.models.ticket_model import TicketModel
+from app.infrastructure.persistence.models.ticket_activity_model import TicketActivityModel
 
 
 # this is the Alembic Config object, which provides
