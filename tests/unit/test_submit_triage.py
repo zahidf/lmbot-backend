@@ -5,6 +5,7 @@ from app.application.use_cases.chatbot.submit_triage import SubmitTriage
 from app.application.dtos.triage_dtos import TriageSubmissionDTO, TriageResponseDTO
 from app.domain.entities.chat_triage import ChatTriage
 from app.domain.entities.chat_session import ChatSession
+from app.domain.entities.ticket import Ticket
 
 
 class TestSubmitTriage:
@@ -43,10 +44,32 @@ class TestSubmitTriage:
         return repo
 
     @pytest.fixture
-    def use_case(self, mock_triage_repository, mock_session_repository):
+    def mock_ticket_repository(self):
+        repo = AsyncMock()
+        ticket = Ticket(
+            id="ticket-001",
+            session_id="session-new-001",
+            user_id="user-123",
+            summary=None,
+            status="open",
+            assigned_to="lmbot",
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+        repo.save.return_value = ticket
+        return repo
+
+    @pytest.fixture
+    def mock_ticket_activity_repository(self):
+        return AsyncMock()
+
+    @pytest.fixture
+    def use_case(self, mock_triage_repository, mock_session_repository, mock_ticket_repository, mock_ticket_activity_repository):
         return SubmitTriage(
             triage_repository=mock_triage_repository,
             session_repository=mock_session_repository,
+            ticket_repository=mock_ticket_repository,
+            ticket_activity_repository=mock_ticket_activity_repository,
         )
 
     @pytest.fixture
@@ -250,3 +273,34 @@ class TestSubmitTriage:
         mock_session_repository.find_by_id.assert_not_called()
         mock_session_repository.create.assert_not_called()
         mock_triage_repository.save.assert_not_called()
+
+    # ─── Ticket auto-creation ─────────────────────────────────
+
+    @pytest.mark.asyncio
+    async def test_ticket_created_for_new_session(
+        self, use_case, valid_dto, mock_ticket_repository, mock_ticket_activity_repository
+    ):
+        """Submitting triage with no session_id creates a ticket assigned to lmbot"""
+        await use_case.execute(valid_dto)
+
+        mock_ticket_repository.save.assert_called_once()
+        saved_ticket = mock_ticket_repository.save.call_args[0][0]
+        assert saved_ticket.user_id == "user-123"
+        assert saved_ticket.status == "open"
+        assert saved_ticket.assigned_to == "lmbot"
+        assert saved_ticket.session_id == "session-new-001"
+
+        mock_ticket_activity_repository.save.assert_called_once()
+        saved_activity = mock_ticket_activity_repository.save.call_args[0][0]
+        assert saved_activity.action == "created"
+        assert saved_activity.actor == "lmbot"
+
+    @pytest.mark.asyncio
+    async def test_ticket_not_created_for_existing_session(
+        self, use_case, valid_dto, mock_ticket_repository
+    ):
+        """Attaching triage to an existing session does not create a new ticket"""
+        valid_dto.session_id = "session-existing-001"
+        await use_case.execute(valid_dto)
+
+        mock_ticket_repository.save.assert_not_called()

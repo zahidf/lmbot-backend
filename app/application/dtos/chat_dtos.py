@@ -29,6 +29,8 @@ class ChatResponseDTO:
     response: str
     sources: List[Dict[str, Any]]
     created_at: datetime
+    can_escalate: bool = False
+    ticket_id: Optional[str] = None
 
 
 @dataclass

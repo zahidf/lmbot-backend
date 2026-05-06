@@ -34,6 +34,8 @@ class ChatResponse(BaseModel):
     response: str
     sources: List[ChatSourceResponse]
     created_at: datetime
+    can_escalate: bool = False
+    ticket_id: Optional[str] = None
     
     model_config = ConfigDict(
         json_schema_extra={

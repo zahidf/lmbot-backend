@@ -62,7 +62,9 @@ async def process_chat_query(
                 ChatSourceResponse(**source)
                 for source in result.sources
             ],
-            created_at=result.created_at
+            created_at=result.created_at,
+            can_escalate=result.can_escalate,
+            ticket_id=result.ticket_id,
         )
         
     except ValueError as e:
