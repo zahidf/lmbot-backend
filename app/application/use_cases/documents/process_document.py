@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import List, Dict, Any
 from app.application.interfaces.repositories.document_repository import DocumentRepository
+from app.application.interfaces.services.file_storage_service import FileStorageService
 from app.infrastructure.persistence.repositories.langchain_vector_store_repository import LangChainVectorStoreRepository
 from app.application.interfaces.services.llm_service import LLMService
 from app.infrastructure.external_services.document_processor_service import DocumentProcessorService
@@ -29,12 +30,14 @@ class ProcessDocument:
         document_repository: DocumentRepository,
         vector_store_repository: LangChainVectorStoreRepository,
         llm_service: LLMService,
+        file_storage_service: FileStorageService,
         document_processor: DocumentProcessorService,
         text_chunker: SemanticTextChunkerService
     ):
         self.document_repository = document_repository
         self.vector_store_repository = vector_store_repository
         self.llm_service = llm_service
+        self.file_storage_service = file_storage_service
         self.document_processor = document_processor
         self.text_chunker = text_chunker
     
@@ -66,9 +69,10 @@ class ProcessDocument:
             }
         
         try:
-            # 2. Extract text from file
+            # 2. Fetch raw bytes then extract text
+            file_content = await self.file_storage_service.get_file(document.file_path)
             text = await self.document_processor.extract_text(
-                file_path=document.file_path,
+                file_content=file_content,
                 file_type=document.file_type
             )
             

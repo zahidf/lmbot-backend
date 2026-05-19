@@ -8,17 +8,22 @@ from ..schemas.chat_schemas import (
     ChatSessionDetailResponse,
     ChatSessionListResponse,
     ChatSessionUpdateRequest,
-    ChatHistoryResponse
+    ChatHistoryResponse,
+    SessionLoadResponse,
 )
+from ..schemas.triage_schemas import TriageResponse, TriageConfigResponse
+from ..schemas.ticket_schemas import TicketDetailResponse, TicketActivityResponse
 from ..dependencies import (
     get_current_user,
     get_process_chat_query_use_case,
     get_chat_repository,
     get_chat_session_repository,
-    get_vector_store_repository
+    get_vector_store_repository,
+    get_load_session_context_use_case,
 )
 from ....infrastructure.persistence.repositories.langchain_vector_store_repository import LangChainVectorStoreRepository
 from ....application.use_cases.chatbot.process_chat_query import ProcessChatQuery
+from ....application.use_cases.chatbot.load_session_context import LoadSessionContext
 from ....application.dtos.chat_dtos import ChatQueryDTO
 from ....application.interfaces.repositories.chat_repository import ChatRepository
 from ....infrastructure.persistence.repositories.chat_session_repository_impl import ChatSessionRepositoryImpl
@@ -68,10 +73,13 @@ async def process_chat_query(
         )
         
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
+        msg = str(e)
+        http_status = (
+            status.HTTP_400_BAD_REQUEST
+            if "escalated" in msg
+            else status.HTTP_404_NOT_FOUND
         )
+        raise HTTPException(status_code=http_status, detail=msg)
     except Exception as e:
         logger.error(f"Chat query failed: {e}")
         raise HTTPException(
@@ -198,6 +206,101 @@ async def get_chat_session(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve chat session: {str(e)}"
+        )
+
+
+@router.get("/sessions/{session_id}/load", response_model=SessionLoadResponse)
+async def load_session_context(
+    session_id: str,
+    current_user=Depends(get_current_user),
+    use_case: LoadSessionContext = Depends(get_load_session_context_use_case),
+):
+    """
+    Load all session context in a single request.
+
+    Returns the session, messages (with sources), triage data, triage config,
+    and ticket status
+    """
+    try:
+        result = await use_case.execute(
+            session_id=session_id,
+            user_id=current_user["id"],
+        )
+
+        triage_response = None
+        triage_config_response = None
+        if result.triage:
+            triage_response = TriageResponse(
+                triage_id=result.triage.triage_id,
+                session_id=result.triage.session_id,
+                burner_series=result.triage.burner_series,
+                serial_number=result.triage.serial_number,
+                issue_category=result.triage.issue_category,
+                issue_category_label=result.triage.issue_category_label,
+                context_summary=result.triage.context_summary,
+                created_at=result.triage.created_at,
+            )
+            triage_config_response = TriageConfigResponse(
+                burner_series=result.triage_config["burner_series"],
+                issue_categories=result.triage_config["issue_categories"],
+                serial_number_example=result.triage_config["serial_number_example"],
+                serial_number_tooltip=result.triage_config["serial_number_tooltip"],
+            )
+
+        ticket_response = None
+        if result.ticket:
+            ticket_response = TicketDetailResponse(
+                ticket_id=result.ticket.ticket_id,
+                session_id=result.ticket.session_id,
+                summary=result.ticket.summary,
+                status=result.ticket.status,
+                assigned_to=result.ticket.assigned_to,
+                activities=[
+                    TicketActivityResponse(
+                        id=a.id,
+                        action=a.action,
+                        actor=a.actor,
+                        note=a.note,
+                        created_at=a.created_at,
+                    )
+                    for a in result.ticket.activities
+                ],
+                created_at=result.ticket.created_at,
+                updated_at=result.ticket.updated_at,
+            )
+
+        return SessionLoadResponse(
+            session=ChatSessionResponse(
+                id=result.session_id,
+                title=result.session_title,
+                created_at=result.session_created_at,
+                updated_at=result.session_updated_at,
+            ),
+            messages=[
+                ChatResponse(
+                    message_id=msg.message_id,
+                    session_id=msg.session_id,
+                    query=msg.query,
+                    response=msg.response,
+                    sources=[ChatSourceResponse(**s) for s in msg.sources],
+                    created_at=msg.created_at,
+                )
+                for msg in result.messages
+            ],
+            triage=triage_response,
+            triage_config=triage_config_response,
+            ticket=ticket_response,
+        )
+
+    except PermissionError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        logger.error(f"Load session context failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to load session context: {str(e)}",
         )
 
 

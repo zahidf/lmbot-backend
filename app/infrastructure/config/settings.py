@@ -42,6 +42,12 @@ class Settings(BaseSettings):
     SEMANTIC_CHUNKING_MAX_CHUNK_SIZE: int = 1500
     SEMANTIC_CHUNKING_CHUNK_OVERLAP: int = 200
     
+    # Supabase Storage
+    USE_SUPABASE_STORAGE: bool = False
+    SUPABASE_URL: str = ""
+    SUPABASE_SERVICE_KEY: str = ""
+    SUPABASE_BUCKET: str = "documents"
+
     # CORS
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001"
     

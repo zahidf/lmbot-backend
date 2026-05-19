@@ -68,6 +68,44 @@ async def list_tickets(
     )
 
 
+@router.get("/session/{session_id}", response_model=TicketDetailResponse)
+async def get_ticket_by_session(
+    session_id: str,
+    current_user=Depends(get_current_user),
+    ticket_repo: TicketRepositoryImpl = Depends(get_ticket_repository),
+    activity_repo: TicketActivityRepositoryImpl = Depends(get_ticket_activity_repository),
+):
+    """Get the ticket associated with a chat session."""
+    ticket = await ticket_repo.find_by_session_id(session_id)
+    if not ticket:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
+
+    if ticket.user_id != current_user["id"]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    activities = await activity_repo.find_by_ticket_id(ticket.id)
+
+    return TicketDetailResponse(
+        ticket_id=ticket.id,
+        session_id=ticket.session_id,
+        summary=ticket.summary,
+        status=ticket.status,
+        assigned_to=ticket.assigned_to,
+        activities=[
+            TicketActivityResponse(
+                id=a.id,
+                action=a.action,
+                actor=a.actor,
+                note=a.note,
+                created_at=a.created_at,
+            )
+            for a in activities
+        ],
+        created_at=ticket.created_at,
+        updated_at=ticket.updated_at,
+    )
+
+
 @router.get("/{ticket_id}", response_model=TicketDetailResponse)
 async def get_ticket(
     ticket_id: str,

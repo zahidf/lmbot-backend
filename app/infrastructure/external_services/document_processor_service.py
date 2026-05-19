@@ -1,42 +1,34 @@
-from pathlib import Path
+import io
 import pdfplumber
 from docx import Document as DocxDocument
-from typing import Optional
+
 
 class DocumentProcessorService:
-    """Extract text from various document formats"""
-    
-    async def extract_text(self, file_path: str, file_type: str) -> str:
-        """Extract text from document"""
-        
+    """Extract text from various document formats (operates on bytes, not filesystem paths)"""
+
+    async def extract_text(self, file_content: bytes, file_type: str) -> str:
         if file_type == "pdf":
-            return await self._extract_from_pdf(file_path)
+            return self._extract_from_pdf(file_content)
         elif file_type in ["docx", "doc"]:
-            return await self._extract_from_docx(file_path)
+            return self._extract_from_docx(file_content)
         elif file_type == "txt":
-            return await self._extract_from_txt(file_path)
+            return self._extract_from_txt(file_content)
         else:
             raise ValueError(f"Unsupported file type: {file_type}")
-    
-    async def _extract_from_pdf(self, file_path: str) -> str:
-        """Extract text from PDF"""
+
+    def _extract_from_pdf(self, content: bytes) -> str:
         text_parts = []
-        
-        with pdfplumber.open(file_path) as pdf:
+        with pdfplumber.open(io.BytesIO(content)) as pdf:
             for page in pdf.pages:
                 text = page.extract_text()
                 if text:
                     text_parts.append(text)
-        
         return "\n\n".join(text_parts)
-    
-    async def _extract_from_docx(self, file_path: str) -> str:
-        """Extract text from DOCX"""
-        doc = DocxDocument(file_path)
+
+    def _extract_from_docx(self, content: bytes) -> str:
+        doc = DocxDocument(io.BytesIO(content))
         paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
         return "\n\n".join(paragraphs)
-    
-    async def _extract_from_txt(self, file_path: str) -> str:
-        """Extract text from TXT"""
-        with open(file_path, 'r', encoding='utf-8') as f:
-            return f.read()
+
+    def _extract_from_txt(self, content: bytes) -> str:
+        return content.decode("utf-8")

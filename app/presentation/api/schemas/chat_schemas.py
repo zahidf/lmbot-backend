@@ -1,6 +1,8 @@
 from pydantic import BaseModel, ConfigDict, Field
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
+from .triage_schemas import TriageResponse, TriageConfigResponse
+from .ticket_schemas import TicketDetailResponse
 
 
 class ChatQueryRequest(BaseModel):
@@ -89,3 +91,12 @@ class ChatSessionUpdateRequest(BaseModel):
 class ChatHistoryResponse(BaseModel):
     """Chat history response"""
     messages: List[ChatResponse]
+
+
+class SessionLoadResponse(BaseModel):
+    """Session load"""
+    session: ChatSessionResponse
+    messages: List[ChatResponse]
+    triage: Optional[TriageResponse] = None
+    triage_config: Optional[TriageConfigResponse] = None
+    ticket: Optional[TicketDetailResponse] = None

@@ -204,6 +204,38 @@ class TestProcessChatQuery:
             await use_case.execute(dto)
 
     @pytest.mark.asyncio
+    async def test_process_query_escalated_session_rejected(
+        self, use_case, mock_chat_session_repository, mock_ticket_repository
+    ):
+        """Sending a message to an escalated session raises ValueError"""
+        mock_chat_session_repository.find_by_id.return_value = ChatSession(
+            id="session-escalated",
+            user_id="user-123",
+            title="Escalated session",
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+        mock_ticket_repository.find_by_session_id.return_value = Ticket(
+            id="ticket-123",
+            session_id="session-escalated",
+            user_id="user-123",
+            summary="Customer had a burner fault.",
+            status="escalated",
+            assigned_to="technical_team",
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+
+        dto = ChatQueryDTO(
+            user_id="user-123",
+            query="Any update?",
+            session_id="session-escalated",
+        )
+
+        with pytest.raises(ValueError, match="escalated"):
+            await use_case.execute(dto)
+
+    @pytest.mark.asyncio
     async def test_process_query_triage_applies_burner_filter(
         self, use_case, mock_triage_repository, mock_vector_store
     ):

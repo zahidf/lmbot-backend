@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Faithfulness Results</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #f5f7fa;
+        color: #333;
+        padding: 20px;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    h1 { font-size: 1.6rem; margin-bottom: 6px; color: #1a1a2e; }
+    h2 { font-size: 1.1rem; margin-bottom: 10px; color: #444; }
+
+    /* Summary panel */
+    .summary-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+    .summary-box {
+        background: #fff;
+        border-radius: 8px;
+        padding: 16px 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .stats-row {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+    }
+    .stat {
+        text-align: center;
+    }
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+    .stat-label {
+        font-size: 0.78rem;
+        color: #777;
+        margin-top: 2px;
+    }
+    .color-dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 4px;
+    }
+    .breakdown { font-size: 0.88rem; margin-top: 8px; }
+    .breakdown span { margin-right: 16px; }
+
+    /* Histogram */
+    .hist-container {
+        display: flex;
+        align-items: flex-end;
+        gap: 4px;
+        height: 100px;
+        margin-top: 10px;
+    }
+    .hist-col {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .hist-bar {
+        width: 100%;
+        border-radius: 3px 3px 0 0;
+        min-height: 2px;
+        transition: height 0.3s;
+    }
+    .hist-label {
+        font-size: 0.68rem;
+        color: #999;
+        margin-top: 4px;
+    }
+    .hist-count {
+        font-size: 0.7rem;
+        color: #666;
+        font-weight: 600;
+    }
+
+    /* Controls */
+    .controls {
+        margin-bottom: 16px;
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    .controls input, .controls select {
+        padding: 6px 12px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        font-size: 0.9rem;
+    }
+    .controls input { width: 300px; }
+    .controls select { min-width: 140px; }
+
+    /* Cards */
+    .card {
+        background: #fff;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 12px 16px;
+        background: #fafbfc;
+        border-bottom: 1px solid #eee;
+        gap: 12px;
+    }
+    .card-title {
+        flex: 1;
+    }
+    .card-idx {
+        font-weight: 700;
+        color: #999;
+        margin-right: 8px;
+        font-size: 0.85rem;
+    }
+    .card-question {
+        font-weight: 600;
+        color: #1a1a2e;
+        font-size: 0.95rem;
+    }
+    .score-pill {
+        padding: 4px 12px;
+        border-radius: 16px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        white-space: nowrap;
+    }
+    .card-body {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0;
+    }
+    .card-col {
+        padding: 12px 16px;
+    }
+    .card-col + .card-col {
+        border-left: 1px solid #eee;
+    }
+    .col-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #888;
+        margin-bottom: 8px;
+        letter-spacing: 0.5px;
+    }
+    .chunk-count {
+        font-weight: 400;
+        color: #aaa;
+        text-transform: none;
+    }
+    .col-content {
+        font-size: 0.85rem;
+        line-height: 1.6;
+        color: #444;
+    }
+    .ctx-scroll {
+        max-height: 350px;
+        overflow-y: auto;
+    }
+
+    /* Context chunks */
+    .chunk {
+        background: #f8f9fb;
+        border: 1px solid #e2e6ed;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        overflow: hidden;
+    }
+    .chunk-label {
+        background: #e8edf3;
+        padding: 3px 10px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #666;
+        border-bottom: 1px solid #dde2ea;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .chunk-toggle {
+        background: none;
+        border: none;
+        color: #4a6cf7;
+        cursor: pointer;
+        font-size: 0.72rem;
+        text-decoration: underline;
+        padding: 0 2px;
+    }
+    .chunk-preview {
+        padding: 6px 10px;
+        font-size: 0.82rem;
+        line-height: 1.4;
+        color: #666;
+    }
+    .chunk-text {
+        padding: 8px 10px;
+        font-size: 0.82rem;
+        line-height: 1.5;
+    }
+
+    .card.hidden { display: none; }
+
+    @media (max-width: 900px) {
+        .card-body { grid-template-columns: 1fr; }
+        .card-col + .card-col { border-left: none; border-top: 1px solid #eee; }
+        .summary-grid { grid-template-columns: 1fr; }
+    }
+</style>
+</head>
+<body>
+<h1>Faithfulness Results</h1>
+<p style="color:#777; margin-bottom: 16px;">2 evaluation results</p>
+
+<div class="summary-grid">
+    <div class="summary-box">
+        <h2>Faithfulness Score Overview</h2>
+        <div class="stats-row">
+            <div class="stat">
+                <div class="stat-value" style="color:#ca8a04">0.62</div>
+                <div class="stat-label">Mean</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" style="color:#ca8a04">0.62</div>
+                <div class="stat-label">Median</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" style="color:#dc2626">0.25</div>
+                <div class="stat-label">Min</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" style="color:#16a34a">1.00</div>
+                <div class="stat-label">Max</div>
+            </div>
+        </div>
+        <div class="breakdown">
+            <span><span class="color-dot" style="background:#16a34a"></span>High (&ge;0.8): 1</span>
+            <span><span class="color-dot" style="background:#ca8a04"></span>Mid (0.5-0.8): 0</span>
+            <span><span class="color-dot" style="background:#dc2626"></span>Low (&lt;0.5): 1</span>
+        </div>
+    </div>
+    <div class="summary-box">
+        <h2>Score Distribution</h2>
+        <div class="hist-container">
+            <div class="hist-col"><div class="hist-bar" style="height:2%; background:#dc2626;"></div><div class="hist-label">0.0</div><div class="hist-count">0</div></div><div class="hist-col"><div class="hist-bar" style="height:2%; background:#dc2626;"></div><div class="hist-label">0.1</div><div class="hist-count">0</div></div><div class="hist-col"><div class="hist-bar" style="height:100.0%; background:#dc2626;"></div><div class="hist-label">0.2</div><div class="hist-count">1</div></div><div class="hist-col"><div class="hist-bar" style="height:2%; background:#dc2626;"></div><div class="hist-label">0.3</div><div class="hist-count">0</div></div><div class="hist-col"><div class="hist-bar" style="height:2%; background:#dc2626;"></div><div class="hist-label">0.4</div><div class="hist-count">0</div></div><div class="hist-col"><div class="hist-bar" style="height:2%; background:#ca8a04;"></div><div class="hist-label">0.5</div><div class="hist-count">0</div></div><div class="hist-col"><div class="hist-bar" style="height:2%; background:#ca8a04;"></div><div class="hist-label">0.6</div><div class="hist-count">0</div></div><div class="hist-col"><div class="hist-bar" style="height:2%; background:#ca8a04;"></div><div class="hist-label">0.7</div><div class="hist-count">0</div></div><div class="hist-col"><div class="hist-bar" style="height:2%; background:#16a34a;"></div><div class="hist-label">0.8</div><div class="hist-count">0</div></div><div class="hist-col"><div class="hist-bar" style="height:100.0%; background:#16a34a;"></div><div class="hist-label">0.9</div><div class="hist-count">1</div></div>
+        </div>
+    </div>
+</div>
+
+<div class="controls">
+    <input type="text" id="searchBox" placeholder="Search questions and responses..." onkeyup="filterCards()">
+    <select id="scoreFilter" onchange="filterCards()">
+        <option value="all">All scores</option>
+        <option value="high">High (&ge; 0.8)</option>
+        <option value="mid">Mid (0.5 - 0.8)</option>
+        <option value="low">Low (&lt; 0.5)</option>
+    </select>
+    <select id="sortOrder" onchange="sortCards()">
+        <option value="default">Original order</option>
+        <option value="score-asc">Score: low to high</option>
+        <option value="score-desc">Score: high to low</option>
+    </select>
+    <span id="visibleCount" style="font-size:0.85rem; color:#777;"></span>
+</div>
+
+<div id="cardsContainer">
+
+    <div class="card" style="border-left: 4px solid #dc2626;">
+        <div class="card-header">
+            <div class="card-title">
+                <span class="card-idx">#1</span>
+                <span class="card-question">Wht are the key featuers of the TX BURNER as described in the Lanemark International manual?</span>
+            </div>
+            <div class="score-pill" style="background:#fef2f2; color:#dc2626;">
+                Faithfulness Score: 0.25
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="card-col">
+                <div class="col-label">Response</div>
+                <div class="col-content">The key features of the Lanemark International TX Burner, as described in the manual, include:<br><br>1. High-Efficiency Fluid Heating: The TX burners are designed for high efficiency fluid heating in industrial tanks, baths, vats, etc. They are an induced draught gas burner firing into a small bore tube heat exchanger immersed in the fluid (Document 1).<br><br>2. Size Variations: The smallest model, the TX15, fires into a pipe size nominally 1 ½” (40 mm) and the largest model, the TX60, fires into pipe size 6” (150 mm) (Document 1). The specific dimensions for each model are given in Document 2.<br><br>3. Compliance with Safety Standards: The burners are constructed in accordance with EN 746 Part 1 and Part 2, which are safety requirements for Industrial Thermoprocessing Equipment and for Combustion and Fuel Handling Systems of Industrial Thermoprocessing Equipment (Document 1).<br><br>4. Temperature Controllers: The burner is generally a high to low to off burner. It is anticipated that a digital electronic temperature controller will be supplied either by Lanemark or by the installer (Document 3).<br><br>5. Ventilation Requirement: The burner should only be installed in a production area with sufficient natural or mechanical ventilation (Document 3).<br><br>6. Documentation: The manual may be sent out with a Declaration of Conformity, Declaration of Incorporation for Partly Completed Machinery, Test Certificates, Calibration Certificates, and Certificates for equipment supplied by Lanemark International Ltd but not manufactured by Lanemark, if specifically requested by the customer (Document 4). Extra copies of this manual are available (Document 5).</div>
+            </div>
+            <div class="card-col ctx-col">
+                <div class="col-label">Retrieved Contexts <span class="chunk-count">(5 chunks)</span></div>
+                <div class="col-content ctx-scroll"><div class="chunk"><div class="chunk-label">Chunk 1<button class="chunk-toggle" onclick="toggleChunk(this)">Expand</button></div><div class="chunk-preview">LANEMARK INTERNATIONAL TX BURNER MANUAL SECTION 1 GENERAL DESIGN BRIEF BURNER SPECIFICATION CONSTRUCTION STANDARDS Lanemark International Ltd TX gas f...</div><div class="chunk-text" style="display:none">LANEMARK INTERNATIONAL TX BURNER MANUAL SECTION 1 GENERAL DESIGN<br>BRIEF BURNER SPECIFICATION CONSTRUCTION STANDARDS<br>Lanemark International Ltd TX gas fired immersion The burners are generally construct...</div></div><div class="chunk"><div class="chunk-label">Chunk 2<button class="chunk-toggle" onclick="toggleChunk(this)">Expand</button></div><div class="chunk-preview">LANEMARK INTERNATIONAL TX BURNER MANUAL SECTION 1 GENERAL DESIGN Fig 1 TX GENERAL DIMENSIONS MODEL DIMENSIONS ( in mm, except where stated ). TYPE: A ...</div><div class="chunk-text" style="display:none">LANEMARK INTERNATIONAL TX BURNER MANUAL SECTION 1 GENERAL DESIGN<br>Fig 1 TX GENERAL DIMENSIONS<br>MODEL DIMENSIONS ( in mm, except where stated ).<br>TYPE:<br>A B C D E F G H<br>TX 15 220 150 40 305 75 ½” BSP 160 1...</div></div><div class="chunk"><div class="chunk-label">Chunk 3<button class="chunk-toggle" onclick="toggleChunk(this)">Expand</button></div><div class="chunk-preview">LANEMARK INTERNATIONAL TX BURNER MANUAL SECTION 1 GENERAL DESIGN used to protect the burner from firing into a heat TEMPERATURE CONTROLLERS exchanger ...</div><div class="chunk-text" style="display:none">LANEMARK INTERNATIONAL TX BURNER MANUAL SECTION 1 GENERAL DESIGN<br>used to protect the burner from firing into a heat<br>TEMPERATURE CONTROLLERS exchanger that is not fully covered by the liquid.<br>This liqu...</div></div><div class="chunk"><div class="chunk-label">Chunk 4<button class="chunk-toggle" onclick="toggleChunk(this)">Expand</button></div><div class="chunk-preview">LANEMARK INTERNATIONAL TX BURNER MANUAL CERTIFICATES If this manual was sent out with an actual burner a copy of the :- • Declaration of Conformity • ...</div><div class="chunk-text" style="display:none">LANEMARK INTERNATIONAL TX BURNER MANUAL CERTIFICATES<br>If this manual was sent out with an actual burner a copy of the :-<br>• Declaration of Conformity<br>• Declaration Of Incorporation for Partly Completed ...</div></div><div class="chunk"><div class="chunk-label">Chunk 5<button class="chunk-toggle" onclick="toggleChunk(this)">Expand</button></div><div class="chunk-preview">LANEMARK INTERNATIONAL TX BURNER MANUAL Extra copies of this manual are available at £25.00 each + VAT. Please quote the Job Number on the front. L A ...</div><div class="chunk-text" style="display:none">LANEMARK INTERNATIONAL TX BURNER MANUAL<br>Extra copies of this manual are available at £25.00 each + VAT. Please quote the Job Number on the front.<br>L A N E M A R K I N T E R N A T I O N A L L T D<br>LANEM ...</div></div></div>
+            </div>
+        </div>
+    </div>
+    <div class="card" style="border-left: 4px solid #16a34a;">
+        <div class="card-header">
+            <div class="card-title">
+                <span class="card-idx">#2</span>
+                <span class="card-question">How does the use of L.P.G Propane Gas in Lanemark International TX burners contribute to their efficiency and flexibility in industrial heating applications?</span>
+            </div>
+            <div class="score-pill" style="background:#f0fdf4; color:#16a34a;">
+                Faithfulness Score: 1.00
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="card-col">
+                <div class="col-label">Response</div>
+                <div class="col-content">The documents do not provide specific information on how the use of L.P.G Propane Gas in Lanemark International TX burners contributes to their efficiency and flexibility in industrial heating applications.</div>
+            </div>
+            <div class="card-col ctx-col">
+                <div class="col-label">Retrieved Contexts <span class="chunk-count">(5 chunks)</span></div>
+                <div class="col-content ctx-scroll"><div class="chunk"><div class="chunk-label">Chunk 1<button class="chunk-toggle" onclick="toggleChunk(this)">Expand</button></div><div class="chunk-preview">LANEMARK INTERNATIONAL TX BURNER MANUAL SECTION 8 COMMISSIONING Fig 1 NATURAL GAS – GAS PRESSURE AGAINST OUTPUT CONVERSION: 1 kW = 3412 Btu/h 1 m.bar ...</div><div class="chunk-text" style="display:none">LANEMARK INTERNATIONAL TX BURNER MANUAL SECTION 8 COMMISSIONING<br>Fig 1 NATURAL GAS – GAS PRESSURE AGAINST OUTPUT<br>CONVERSION:<br>1 kW = 3412 Btu/h 1 m.bar = 0.4 in.wg<br>Section 8 Page 6 Natural Gas<br>LANEMARK...</div></div><div class="chunk"><div class="chunk-label">Chunk 2<button class="chunk-toggle" onclick="toggleChunk(this)">Expand</button></div><div class="chunk-preview">LANEMARK INTERNATIONAL TX BURNER MANUAL SECTION 1 GENERAL DESIGN BRIEF BURNER SPECIFICATION CONSTRUCTION STANDARDS Lanemark International Ltd TX gas f...</div><div class="chunk-text" style="display:none">LANEMARK INTERNATIONAL TX BURNER MANUAL SECTION 1 GENERAL DESIGN<br>BRIEF BURNER SPECIFICATION CONSTRUCTION STANDARDS<br>Lanemark International Ltd TX gas fired immersion The burners are generally construct...</div></div><div class="chunk"><div class="chunk-label">Chunk 3<button class="chunk-toggle" onclick="toggleChunk(this)">Expand</button></div><div class="chunk-preview">a Lanemark TX gas burner only with :- should be fitted. Internal pressure 100 mbar negative max’ The liquid temperature will have to be controlled Int...</div><div class="chunk-text" style="display:none">a Lanemark TX gas burner only with :- should be fitted.<br>Internal pressure 100 mbar negative max’ The liquid temperature will have to be controlled<br>Internal wall temperature 300 °C maximum and a thermo...</div></div><div class="chunk"><div class="chunk-label">Chunk 4<button class="chunk-toggle" onclick="toggleChunk(this)">Expand</button></div><div class="chunk-preview">LANEMARK INTERNATIONAL TX BURNER MANUAL SECTION 1 GENERAL DESIGN used to protect the burner from firing into a heat TEMPERATURE CONTROLLERS exchanger ...</div><div class="chunk-text" style="display:none">LANEMARK INTERNATIONAL TX BURNER MANUAL SECTION 1 GENERAL DESIGN<br>used to protect the burner from firing into a heat<br>TEMPERATURE CONTROLLERS exchanger that is not fully covered by the liquid.<br>This liqu...</div></div><div class="chunk"><div class="chunk-label">Chunk 5<button class="chunk-toggle" onclick="toggleChunk(this)">Expand</button></div><div class="chunk-preview">LANEMARK INTERNATIONAL TX BURNER MANUAL SECTION 1 GENERAL DESIGN Fig 1 TX GENERAL DIMENSIONS MODEL DIMENSIONS ( in mm, except where stated ). TYPE: A ...</div><div class="chunk-text" style="display:none">LANEMARK INTERNATIONAL TX BURNER MANUAL SECTION 1 GENERAL DESIGN<br>Fig 1 TX GENERAL DIMENSIONS<br>MODEL DIMENSIONS ( in mm, except where stated ).<br>TYPE:<br>A B C D E F G H<br>TX 15 220 150 40 305 75 ½” BSP 160 1...</div></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleChunk(btn) {
+    const chunk = btn.closest('.chunk');
+    const preview = chunk.querySelector('.chunk-preview');
+    const full = chunk.querySelector('.chunk-text');
+    if (full.style.display === 'none') {
+        full.style.display = 'block';
+        preview.style.display = 'none';
+        btn.textContent = 'Collapse';
+    } else {
+        full.style.display = 'none';
+        preview.style.display = 'block';
+        btn.textContent = 'Expand';
+    }
+}
+
+function getScore(card) {
+    const pill = card.querySelector('.score-pill');
+    const match = pill.textContent.match(/([\d.]+)/);
+    return match ? parseFloat(match[0]) : 0;
+}
+
+function filterCards() {
+    const query = document.getElementById('searchBox').value.toLowerCase();
+    const scoreFilter = document.getElementById('scoreFilter').value;
+    const cards = document.querySelectorAll('.card');
+    let visible = 0;
+    cards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        const score = getScore(card);
+        let show = text.includes(query);
+        if (scoreFilter === 'high') show = show && score >= 0.8;
+        else if (scoreFilter === 'mid') show = show && score >= 0.5 && score < 0.8;
+        else if (scoreFilter === 'low') show = show && score < 0.5;
+        card.classList.toggle('hidden', !show);
+        if (show) visible++;
+    });
+    document.getElementById('visibleCount').textContent = visible + ' of ' + cards.length + ' shown';
+}
+
+function sortCards() {
+    const order = document.getElementById('sortOrder').value;
+    const container = document.getElementById('cardsContainer');
+    const cards = Array.from(container.querySelectorAll('.card'));
+    if (order === 'score-asc') {
+        cards.sort((a, b) => getScore(a) - getScore(b));
+    } else if (order === 'score-desc') {
+        cards.sort((a, b) => getScore(b) - getScore(a));
+    } else {
+        cards.sort((a, b) => {
+            const ai = parseInt(a.querySelector('.card-idx').textContent.replace('#', ''));
+            const bi = parseInt(b.querySelector('.card-idx').textContent.replace('#', ''));
+            return ai - bi;
+        });
+    }
+    cards.forEach(c => container.appendChild(c));
+}
+
+filterCards();
+</script>
+</body>
+</html>

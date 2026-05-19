@@ -27,6 +27,13 @@ class TestProcessDocument:
         return service
 
     @pytest.fixture
+    def mock_file_storage_service(self):
+        """Mock file storage service"""
+        service = AsyncMock()
+        service.get_file.return_value = b"fake file bytes"
+        return service
+
+    @pytest.fixture
     def mock_document_processor(self):
         """Mock document processor service"""
         processor = AsyncMock()
@@ -68,6 +75,7 @@ class TestProcessDocument:
         mock_document_repository,
         mock_vector_store_repository,
         mock_llm_service,
+        mock_file_storage_service,
         mock_document_processor,
         mock_text_chunker
     ):
@@ -76,6 +84,7 @@ class TestProcessDocument:
             document_repository=mock_document_repository,
             vector_store_repository=mock_vector_store_repository,
             llm_service=mock_llm_service,
+            file_storage_service=mock_file_storage_service,
             document_processor=mock_document_processor,
             text_chunker=mock_text_chunker
         )
@@ -109,7 +118,7 @@ class TestProcessDocument:
         # Verify calls
         mock_document_repository.find_by_id.assert_called_once_with("doc-123")
         mock_document_processor.extract_text.assert_called_once_with(
-            file_path="/uploads/test_manual.pdf",
+            file_content=b"fake file bytes",
             file_type="pdf"
         )
         mock_text_chunker.chunk_text.assert_called_once()
@@ -288,7 +297,7 @@ class TestProcessDocument:
 
         # Assert
         mock_document_processor.extract_text.assert_called_once_with(
-            file_path="/uploads/manual.docx",
+            file_content=b"fake file bytes",
             file_type="docx"
         )
         assert result["status"] == "processed"
@@ -314,7 +323,7 @@ class TestProcessDocument:
 
         # Assert
         mock_document_processor.extract_text.assert_called_once_with(
-            file_path="/uploads/notes.txt",
+            file_content=b"fake file bytes",
             file_type="txt"
         )
         assert result["status"] == "processed"

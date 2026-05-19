@@ -1,6 +1,8 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional, Dict, Any
+from .triage_dtos import TriageResponseDTO
+from .ticket_dtos import TicketDetailDTO
 
 
 @dataclass
@@ -52,3 +54,16 @@ class ChatSessionDetailDTO:
     messages: List[ChatResponseDTO]
     created_at: datetime
     updated_at: datetime
+
+
+@dataclass
+class SessionContextDTO:
+    """Output DTO for session load."""
+    session_id: str
+    session_title: Optional[str]
+    session_created_at: datetime
+    session_updated_at: datetime
+    messages: List[ChatResponseDTO]
+    triage: Optional[TriageResponseDTO]
+    triage_config: Optional[Dict[str, Any]]
+    ticket: Optional[TicketDetailDTO]

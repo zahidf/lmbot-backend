@@ -93,9 +93,9 @@ class DocumentRepositoryImpl(DocumentRepository):
     
     async def delete(self, document_id: str) -> bool:
         """Delete document by ID"""
-        
+
         result = await self.session.execute(
             delete(DocumentModel).where(DocumentModel.id == uuid.UUID(document_id))
         )
-        
+
         return result.rowcount > 0

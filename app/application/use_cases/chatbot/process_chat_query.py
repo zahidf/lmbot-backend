@@ -105,6 +105,13 @@ class ProcessChatQuery:
             if not session:
                 raise ValueError(f"Chat session {dto.session_id} not found")
 
+            ticket = await self.ticket_repository.find_by_session_id(session.id)
+            if ticket and ticket.status == "escalated":
+                raise ValueError(
+                    "This session has been escalated to the technical team "
+                    "and is no longer accepting messages."
+                )
+
             await self.chat_session_repository.update_title(
                 session_id=session.id,
                 title=session.title or ChatSession.generate_title_from_query(dto.query)

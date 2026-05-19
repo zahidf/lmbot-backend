@@ -14,10 +14,13 @@ from app.infrastructure.persistence.repositories.ticket_repository_impl import T
 from app.infrastructure.persistence.repositories.ticket_activity_repository_impl import TicketActivityRepositoryImpl
 from ...application.use_cases.chatbot.process_chat_query import ProcessChatQuery
 from ...application.use_cases.chatbot.submit_triage import SubmitTriage
+from ...application.use_cases.chatbot.load_session_context import LoadSessionContext
 from app.application.use_cases.documents.upload_document import UploadDocument
 from app.application.use_cases.documents.process_document import ProcessDocument
 from app.application.use_cases.tickets.escalate_ticket import EscalateTicket
 from app.infrastructure.external_services.local_file_storage_service import LocalFileStorageService
+from app.infrastructure.external_services.supabase_file_storage_service import SupabaseFileStorageService
+from app.application.interfaces.services.file_storage_service import FileStorageService
 from app.infrastructure.external_services.document_processor_service import DocumentProcessorService
 from app.infrastructure.external_services.semantic_text_chunking_service import SemanticTextChunkerService
 from ...infrastructure.config.settings import get_settings
@@ -58,8 +61,14 @@ def get_llm_service() -> LangChainLLMService:
         temperature=settings.OPENAI_TEMPERATURE
     )
 
-def get_file_storage_service() -> LocalFileStorageService:
-    """Get file storage service singleton"""
+def get_file_storage_service() -> FileStorageService:
+    """Get file storage service — Supabase in production, local on dev"""
+    if settings.USE_SUPABASE_STORAGE:
+        return SupabaseFileStorageService(
+            supabase_url=settings.SUPABASE_URL,
+            supabase_service_key=settings.SUPABASE_SERVICE_KEY,
+            bucket_name=settings.SUPABASE_BUCKET,
+        )
     return LocalFileStorageService()
 
 def get_document_processor_service() -> DocumentProcessorService:
@@ -140,6 +149,19 @@ async def get_process_chat_query_use_case(
     )
 
 
+async def get_load_session_context_use_case(
+    session: AsyncSession = Depends(get_db),
+) -> LoadSessionContext:
+    return LoadSessionContext(
+        session_repository=ChatSessionRepositoryImpl(session),
+        chat_repository=ChatRepositoryImpl(session),
+        triage_repository=ChatTriageRepositoryImpl(session),
+        ticket_repository=TicketRepositoryImpl(session),
+        ticket_activity_repository=TicketActivityRepositoryImpl(session),
+        vector_store_repository=LangChainVectorStoreRepository(session),
+    )
+
+
 async def get_submit_triage_use_case(
     session: AsyncSession = Depends(get_db),
 ) -> SubmitTriage:
@@ -165,7 +187,7 @@ async def get_escalate_ticket_use_case(
 
 async def get_upload_document_use_case(
     document_repo: DocumentRepositoryImpl = Depends(get_document_repository),
-    file_storage: LocalFileStorageService = Depends(get_file_storage_service)
+    file_storage: FileStorageService = Depends(get_file_storage_service)
 ) -> UploadDocument:
     return UploadDocument(
         document_repository=document_repo,
@@ -176,6 +198,7 @@ async def get_process_document_use_case(
     document_repo: DocumentRepositoryImpl = Depends(get_document_repository),
     vector_repo: LangChainVectorStoreRepository = Depends(get_vector_store_repository),
     llm_service: LangChainLLMService = Depends(get_llm_service),
+    file_storage: FileStorageService = Depends(get_file_storage_service),
     document_processor: DocumentProcessorService = Depends(get_document_processor_service),
     text_chunker: SemanticTextChunkerService = Depends(get_text_chunker_service)
 ) -> ProcessDocument:
@@ -183,6 +206,7 @@ async def get_process_document_use_case(
         document_repository=document_repo,
         vector_store_repository=vector_repo,
         llm_service=llm_service,
+        file_storage_service=file_storage,
         document_processor=document_processor,
         text_chunker=text_chunker
     )
