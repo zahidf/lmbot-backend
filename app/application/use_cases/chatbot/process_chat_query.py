@@ -34,7 +34,7 @@ class ProcessChatQuery:
     """
 
     SIMILARITY_THRESHOLD = 0.3
-    TOP_K = 3
+    TOP_K = 2
 
     # Phrases that indicate the LLM could not form an answer from the retrieved chunks
     _CANNOT_ANSWER_PHRASES = [
