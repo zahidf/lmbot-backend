@@ -331,7 +331,7 @@ class ProcessChatQuery:
                 )
                 saved_message = await self.chat_repository.save(chat_message)
                 ticket = await self.ticket_repository.find_by_session_id(session.id)
-                yield f"data: {json.dumps({'type': 'done', 'message_id': str(saved_message.id), 'sources': [], 'can_escalate': True, 'ticket_id': str(ticket.id) if ticket else None})}\n\n"
+                yield f"data: {json.dumps({'type': 'done', 'message_id': str(saved_message.id), 'sources': [], 'can_escalate': True, 'ticket_id': str(ticket.id) if ticket else None, 'response': response_text})}\n\n"
                 return
 
             context_documents = [chunk['content'] for chunk in relevant_chunks]
