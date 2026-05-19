@@ -9,15 +9,10 @@ class LocalFileStorageService(FileStorageService):
     """Local filesystem implementation of file storage"""
     
     def __init__(self, upload_dir: str = None):
-        # Auto-detect upload directory based on OS
         if upload_dir is None:
-            if os.name == 'nt':  # Windows
-                # Use project root/uploads
-                project_root = Path(__file__).parent.parent.parent.parent
-                upload_dir = project_root / "uploads"
+            project_root = Path(__file__).parent.parent.parent.parent
+            upload_dir = project_root / "uploads"
 
-            #TODO other os's
-        
         self.upload_dir = Path(upload_dir)
         # Create upload directory if it doesn't exist
         self.upload_dir.mkdir(parents=True, exist_ok=True)
