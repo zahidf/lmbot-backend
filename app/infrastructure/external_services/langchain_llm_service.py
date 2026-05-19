@@ -1,4 +1,4 @@
-from typing import List
+from typing import AsyncIterator, List, Optional
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
@@ -63,15 +63,7 @@ class LangChainLLMService(LLMService):
         embedding = await self.embeddings.aembed_query(text)
         return embedding
     
-    async def generate_response(
-        self,
-        query: str,
-        context_documents: List[str]
-    ) -> str:
-        """Generate response using RAG with LangChain"""
-        
-        # System prompt
-        system_prompt = """You are a technical support assistant for Lanemark Combustion Engineering Limited.
+    _SYSTEM_PROMPT = """You are a technical support assistant for Lanemark Combustion Engineering Limited.
 
 Your role is to help customers with their industrial burner products using the provided documentation.
 
@@ -100,16 +92,10 @@ Product Lines:
 - FD Series: Forced draft burners
 - HC Series: High-capacity burners
 - KS Series: Compact burners"""
-        
-        # Format context
-        context = "\n\n".join([
-            f"Document {i+1}:\n{doc}"
-            for i, doc in enumerate(context_documents)
-        ])
-        
-        # Create prompt template
+
+    def _build_chain(self):
         prompt = ChatPromptTemplate.from_messages([
-            ("system", system_prompt),
+            ("system", self._SYSTEM_PROMPT),
             ("human", """Context from documentation:
 {context}
 
@@ -117,18 +103,47 @@ Customer Question: {query}
 
 Provide a helpful, accurate response based on the documentation.""")
         ])
-        
-        # Create chain
-        chain = prompt | self.llm | StrOutputParser()
-        
-        # Generate response
-        response = await chain.ainvoke({
-            "context": context,
-            "query": query
-        })
-        
-        response = self._ensure_safety_disclaimer(response)
-        return response
+        return prompt | self.llm | StrOutputParser()
+
+    def _format_context(self, context_documents: List[str]) -> str:
+        return "\n\n".join(
+            f"Document {i+1}:\n{doc}"
+            for i, doc in enumerate(context_documents)
+        )
+
+    def _disclaimer_suffix(self, response: str) -> Optional[str]:
+        lower = response.lower()
+        if any(kw in lower for kw in self.GAS_SAFETY_KEYWORDS) and \
+                not any(ind in lower for ind in self.DISCLAIMER_INDICATORS):
+            return self.GAS_SAFETY_DISCLAIMER
+        return None
+
+    async def generate_response(
+        self,
+        query: str,
+        context_documents: List[str]
+    ) -> str:
+        """Generate response using RAG with LangChain"""
+        context = self._format_context(context_documents)
+        chain = self._build_chain()
+        response = await chain.ainvoke({"context": context, "query": query})
+        return self._ensure_safety_disclaimer(response)
+
+    async def stream_response(
+        self,
+        query: str,
+        context_documents: List[str]
+    ) -> AsyncIterator[str]:
+        """Stream response tokens using RAG with LangChain"""
+        context = self._format_context(context_documents)
+        chain = self._build_chain()
+        full_response = []
+        async for token in chain.astream({"context": context, "query": query}):
+            full_response.append(token)
+            yield token
+        suffix = self._disclaimer_suffix("".join(full_response))
+        if suffix:
+            yield suffix
 
     async def generate_summary(self, messages: List[dict]) -> str:
         """Generate a concise 2–3 sentence summary of a chat session for ticket escalation"""

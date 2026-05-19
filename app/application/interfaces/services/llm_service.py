@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import AsyncIterator, List
 
 
 class LLMService(ABC):
@@ -17,6 +17,15 @@ class LLMService(ABC):
         context_documents: List[str]
     ) -> str:
         """Generate response using RAG"""
+        pass
+
+    @abstractmethod
+    async def stream_response(
+        self,
+        query: str,
+        context_documents: List[str]
+    ) -> AsyncIterator[str]:
+        """Stream response tokens using RAG"""
         pass
 
     @abstractmethod

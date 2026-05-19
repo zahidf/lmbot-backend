@@ -1,4 +1,6 @@
+import json
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from typing import List
 from ..schemas.chat_schemas import (
     ChatQueryRequest,
@@ -86,6 +88,38 @@ async def process_chat_query(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An error occurred while processing your query: {str(e)}"
         )
+
+
+# ─── Chat Query (Streaming) ──────────────────────────────────
+
+@router.post("/query/stream")
+async def stream_chat_query(
+    request: ChatQueryRequest,
+    current_user=Depends(get_current_user),
+    use_case: ProcessChatQuery = Depends(get_process_chat_query_use_case)
+):
+    """
+    Stream a chat response as Server-Sent Events.
+
+    Events:
+    - `metadata` — sent once before tokens; contains `session_id`
+    - `token`    — one LLM token; contains `content`
+    - `done`     — final event; contains `message_id`, `sources`, `can_escalate`, `ticket_id`
+    - `error`    — sent on failure; contains `detail`
+    """
+    dto = ChatQueryDTO(
+        user_id=current_user["id"],
+        query=request.query,
+        session_id=request.session_id
+    )
+    return StreamingResponse(
+        use_case.stream(dto),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        }
+    )
 
 
 # ─── Chat Sessions ───────────────────────────────────────────
