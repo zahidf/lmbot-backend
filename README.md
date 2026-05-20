@@ -1,8 +1,11 @@
 # LMBot Backend
 
 AI-powered customer service backend for Lanemark, built with FastAPI and LangChain.
+API can be accessed on https://lmbot-api.onrender.com
 
 ---
+
+# Running Locally:
 
 ## Prerequisites
 
