@@ -78,3 +78,5 @@ dmypy.json
 .pypirc
 
 /uploads
+rag_eval/documents/TXManual.pdf
+rag_eval/documents/TXManualExtract.pdf
