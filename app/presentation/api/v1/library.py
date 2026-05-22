@@ -91,6 +91,18 @@ def _raise_for_value_error(error: ValueError) -> None:
     raise HTTPException(status_code=http_status, detail=message)
 
 
+def _file_stream_response(result, disposition: str) -> StreamingResponse:
+    encoded_name = quote(result.file.original_file_name)
+    return StreamingResponse(
+        BytesIO(result.content),
+        media_type=result.file.content_type,
+        headers={
+            "Content-Disposition": (f"{disposition}; filename*=UTF-8''{encoded_name}"),
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
 @router.get("/items", response_model=LibraryItemsResponse)
 async def list_library_items(
     folder_id: str | None = None,
@@ -267,18 +279,30 @@ async def download_library_file(
 ):
     try:
         result = await use_case.execute(file_id)
-        encoded_name = quote(result.file.original_file_name)
-        return StreamingResponse(
-            BytesIO(result.content),
-            media_type=result.file.content_type,
-            headers={
-                "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_name}",
-            },
-        )
+        return _file_stream_response(result, "attachment")
     except ValueError as e:
         _raise_for_value_error(e)
     except Exception as e:
         logger.error(f"Download library file failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        )
+
+
+@router.get("/files/{file_id}/preview")
+async def preview_library_file(
+    file_id: str,
+    current_user=Depends(get_current_user),
+    use_case: DownloadLibraryFile = Depends(get_download_library_file_use_case),
+):
+    try:
+        result = await use_case.execute(file_id)
+        return _file_stream_response(result, "inline")
+    except ValueError as e:
+        _raise_for_value_error(e)
+    except Exception as e:
+        logger.error(f"Preview library file failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",

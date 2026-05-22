@@ -207,6 +207,16 @@ def test_regular_user_can_list_read_and_download(client, library_fakes, auth_hea
     )
     assert download_response.status_code == 200
     assert download_response.content == b"manual bytes"
+    assert download_response.headers["content-disposition"].startswith("attachment;")
+
+    preview_response = client.get(
+        f"/api/v1/library/files/{file_id}/preview",
+        headers=auth_headers,
+    )
+    assert preview_response.status_code == 200
+    assert preview_response.content == b"manual bytes"
+    assert preview_response.headers["content-disposition"].startswith("inline;")
+    assert preview_response.headers["content-type"].startswith("application/pdf")
     assert repo.files[file_id].storage_path in storage.files
 
 
