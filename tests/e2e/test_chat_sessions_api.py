@@ -207,7 +207,9 @@ class TestChatSessionsAPI:
 
     # ── Session messages ordering ────────────────────────────────
 
-    def test_session_messages_ordered_chronologically(self, client, auth_headers, session_id):
+    def test_session_messages_ordered_chronologically(
+        self, client, auth_headers, session_id
+    ):
         """Messages within a session are returned oldest-first"""
         # Send a second query to the same session
         client.post(
@@ -231,7 +233,9 @@ class TestChatSessionsAPI:
 
     # ── Chat query with existing session ────────────────────────
 
-    def test_chat_query_with_existing_session_id(self, client, auth_headers, session_id):
+    def test_chat_query_with_existing_session_id(
+        self, client, auth_headers, session_id
+    ):
         """POST /chat/query with an existing session_id reuses that session"""
         response = client.post(
             "/api/v1/chat/query",

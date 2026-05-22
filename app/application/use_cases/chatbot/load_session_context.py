@@ -1,9 +1,17 @@
-from app.application.interfaces.repositories.chat_session_repository import ChatSessionRepository
+from app.application.interfaces.repositories.chat_session_repository import (
+    ChatSessionRepository,
+)
 from app.application.interfaces.repositories.chat_repository import ChatRepository
-from app.application.interfaces.repositories.chat_triage_repository import ChatTriageRepository
+from app.application.interfaces.repositories.chat_triage_repository import (
+    ChatTriageRepository,
+)
 from app.application.interfaces.repositories.ticket_repository import TicketRepository
-from app.application.interfaces.repositories.ticket_activity_repository import TicketActivityRepository
-from app.application.interfaces.repositories.vector_store_repository import VectorStoreRepository
+from app.application.interfaces.repositories.ticket_activity_repository import (
+    TicketActivityRepository,
+)
+from app.application.interfaces.repositories.vector_store_repository import (
+    VectorStoreRepository,
+)
 from app.application.dtos.chat_dtos import SessionContextDTO, ChatResponseDTO
 from app.application.dtos.triage_dtos import TriageResponseDTO
 from app.application.dtos.ticket_dtos import TicketDetailDTO, TicketActivityDTO
@@ -47,7 +55,9 @@ class LoadSessionContext:
         if ticket:
             activities = await self._activities.find_by_ticket_id(ticket.id)
 
-        all_chunk_ids = [cid for msg in messages for cid in (msg.source_document_ids or [])]
+        all_chunk_ids = [
+            cid for msg in messages for cid in (msg.source_document_ids or [])
+        ]
         chunks_by_id = {}
         if all_chunk_ids:
             chunks = await self._vectors.get_chunks_by_ids(all_chunk_ids)

@@ -11,19 +11,13 @@ class LLMService(ABC):
         pass
 
     @abstractmethod
-    async def generate_response(
-        self,
-        query: str,
-        context_documents: List[str]
-    ) -> str:
+    async def generate_response(self, query: str, context_documents: List[str]) -> str:
         """Generate response using RAG"""
         pass
 
     @abstractmethod
     async def stream_response(
-        self,
-        query: str,
-        context_documents: List[str]
+        self, query: str, context_documents: List[str]
     ) -> AsyncIterator[str]:
         """Stream response tokens using RAG"""
         pass

@@ -14,12 +14,19 @@ from app.infrastructure.persistence.database import Base
 from app.infrastructure.persistence.models.document_model import DocumentModel
 from app.infrastructure.persistence.models.chat_session_model import ChatSessionModel
 from app.infrastructure.persistence.models.chat_message_model import ChatMessageModel
-from app.infrastructure.persistence.models.document_chunk_model import DocumentChunkModel
+from app.infrastructure.persistence.models.document_chunk_model import (
+    DocumentChunkModel,
+)
 from app.infrastructure.persistence.models.user_model import UserModel
 from app.infrastructure.persistence.models.chat_triage_model import ChatTriageModel
 from app.infrastructure.persistence.models.ticket_model import TicketModel
-from app.infrastructure.persistence.models.ticket_activity_model import TicketActivityModel
-
+from app.infrastructure.persistence.models.ticket_activity_model import (
+    TicketActivityModel,
+)
+from app.infrastructure.persistence.models.library_folder_model import (
+    LibraryFolderModel,
+)
+from app.infrastructure.persistence.models.library_file_model import LibraryFileModel
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -42,17 +49,19 @@ target_metadata = Base.metadata
 # ... etc.
 
 
-if os.getenv('DATABASE_URL'):
-    config.set_main_option('sqlalchemy.url', os.getenv('DATABASE_URL'))
+if os.getenv("DATABASE_URL"):
+    config.set_main_option("sqlalchemy.url", os.getenv("DATABASE_URL"))
 else:
-    db_user = os.getenv('DB_USER', 'postgres')
-    db_pass = os.getenv('DB_PASSWORD', 'zahid')
-    db_host = os.getenv('DB_HOST', 'localhost')
-    db_port = os.getenv('DB_PORT', '5432')
-    db_name = os.getenv('DB_NAME', 'lmbot_db')
-    
-    database_url = f'postgresql+asyncpg://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}'
-    config.set_main_option('sqlalchemy.url', database_url)
+    db_user = os.getenv("DB_USER", "postgres")
+    db_pass = os.getenv("DB_PASSWORD", "zahid")
+    db_host = os.getenv("DB_HOST", "localhost")
+    db_port = os.getenv("DB_PORT", "5432")
+    db_name = os.getenv("DB_NAME", "lmbot_db")
+
+    database_url = (
+        f"postgresql+asyncpg://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
+    )
+    config.set_main_option("sqlalchemy.url", database_url)
 
 
 def run_migrations_offline() -> None:
@@ -87,12 +96,11 @@ def run_migrations_online() -> None:
 
     """
     configuration = config.get_section(config.config_ini_section)
-    if configuration and 'sqlalchemy.url' in configuration:
-        configuration['sqlalchemy.url'] = configuration['sqlalchemy.url'].replace(
-            'postgresql+asyncpg://', 
-            'postgresql+psycopg2://'
+    if configuration and "sqlalchemy.url" in configuration:
+        configuration["sqlalchemy.url"] = configuration["sqlalchemy.url"].replace(
+            "postgresql+asyncpg://", "postgresql+psycopg2://"
         )
-    
+
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",
@@ -101,7 +109,10 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata, compare_type=True, compare_server_default=True
+            connection=connection,
+            target_metadata=target_metadata,
+            compare_type=True,
+            compare_server_default=True,
         )
 
         with context.begin_transaction():

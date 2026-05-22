@@ -13,7 +13,9 @@ from ..dependencies import (
 )
 from ....application.use_cases.chatbot.submit_triage import SubmitTriage
 from ....application.dtos.triage_dtos import TriageSubmissionDTO, CATEGORY_FOLLOW_UPS
-from ....application.interfaces.repositories.chat_triage_repository import ChatTriageRepository
+from ....application.interfaces.repositories.chat_triage_repository import (
+    ChatTriageRepository,
+)
 from ....domain.entities.chat_triage import ChatTriage
 import logging
 
@@ -23,16 +25,16 @@ logger = logging.getLogger(__name__)
 
 # ─── Triage Config (for frontend rendering) ──────────────────
 
+
 @router.get("/config", response_model=TriageConfigResponse)
 async def get_triage_config():
     """
     Get triage questionnaire configuration.
-    
+
     Returns burner series, issue categories, and serial number hints
     so the frontend can render the triage wizard.
     """
     return TriageConfigResponse(
-
         # currently these are constants, in the future, this data will be taken from database
         burner_series=ChatTriage.BURNER_SERIES,
         issue_categories=ChatTriage.ISSUE_CATEGORIES,
@@ -46,13 +48,14 @@ async def get_triage_config():
 
 # ─── Follow-up prompts per category ──────────────────────────
 
+
 @router.get("/follow-ups/{category}", response_model=TriageFollowUpsResponse)
 async def get_follow_up_prompts(category: str):
     """
     Get the follow-up questions for a specific issue category.
-    
+
     - **category**: Issue category code (A-G)
-    
+
     Returns tailored follow-up prompts for the selected category.
     """
     # currently these are constants, in the future, this data will be taken from database
@@ -62,9 +65,9 @@ async def get_follow_up_prompts(category: str):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid category: {category}. Must be one of: {', '.join(ChatTriage.ISSUE_CATEGORIES.keys())}",
         )
-    
+
     prompts = CATEGORY_FOLLOW_UPS.get(category, [])
-    
+
     return TriageFollowUpsResponse(
         category=category,
         category_label=ChatTriage.ISSUE_CATEGORIES[category],
@@ -83,7 +86,10 @@ async def get_follow_up_prompts(category: str):
 
 # ─── Submit triage ────────────────────────────────────────────
 
-@router.post("/submit", response_model=TriageResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/submit", response_model=TriageResponse, status_code=status.HTTP_201_CREATED
+)
 async def submit_triage(
     request: TriageSubmissionRequest,
     current_user=Depends(get_current_user),
@@ -91,11 +97,11 @@ async def submit_triage(
 ):
     """
     Submit completed triage questionnaire.
-    
+
     Creates a new chat session (or attaches to an existing one)
     and saves the triage data. Returns a session_id that must be
     used for all subsequent /chat/query requests.
-    
+
     Flow:
     1. Validates all triage inputs
     2. Creates chat session with descriptive title
@@ -114,9 +120,9 @@ async def submit_triage(
             issue_free_text=request.issue_free_text,
             follow_up_answers=request.follow_up_answers,
         )
-        
+
         result = await use_case.execute(dto)
-        
+
         return TriageResponse(
             triage_id=result.triage_id,
             session_id=result.session_id,
@@ -127,7 +133,7 @@ async def submit_triage(
             context_summary=result.context_summary,
             created_at=result.created_at,
         )
-    
+
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -143,6 +149,7 @@ async def submit_triage(
 
 # ─── Get triage for a session ────────────────────────────────
 
+
 @router.get("/session/{session_id}", response_model=TriageResponse)
 async def get_session_triage(
     session_id: str,
@@ -151,7 +158,7 @@ async def get_session_triage(
 ):
     """
     Get the triage record for a specific chat session.
-    
+
     - **session_id**: UUID of the chat session
     """
     try:
@@ -161,14 +168,14 @@ async def get_session_triage(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="No triage found for this session",
             )
-        
+
         # Verify ownership
         if triage.user_id != current_user["id"]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied",
             )
-        
+
         return TriageResponse(
             triage_id=triage.id,
             session_id=triage.session_id,
@@ -179,7 +186,7 @@ async def get_session_triage(
             context_summary=triage.get_context_summary(),
             created_at=triage.created_at,
         )
-    
+
     except HTTPException:
         raise
     except Exception as e:

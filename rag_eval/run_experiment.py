@@ -23,8 +23,12 @@ from langfuse import get_client, Evaluation
 from langfuse.openai import AsyncOpenAI
 from ragas.embeddings import OpenAIEmbeddings
 from ragas.llms import llm_factory
-from ragas.metrics.collections import AnswerCorrectness, ContextRecall, Faithfulness, ContextPrecision
-
+from ragas.metrics.collections import (
+    AnswerCorrectness,
+    ContextRecall,
+    Faithfulness,
+    ContextPrecision,
+)
 
 RAG_API_URL = os.getenv("RAG_API_URL")
 RAG_API_TOKEN = os.getenv("RAG_API_TOKEN")
@@ -39,12 +43,15 @@ def init_langfuse():
     langfuse = get_client()
     return langfuse
 
+
 def init_scorers():
     client = AsyncOpenAI(timeout=120.0, max_retries=3)
     evaluator_llm = llm_factory("gpt-4.1-mini", client=client, max_tokens=8192)
     embeddings = OpenAIEmbeddings(model="text-embedding-3-small", client=client)
     return {
-        "answer_correctness": AnswerCorrectness(llm=evaluator_llm, embeddings=embeddings),
+        "answer_correctness": AnswerCorrectness(
+            llm=evaluator_llm, embeddings=embeddings
+        ),
         "context_recall": ContextRecall(llm=evaluator_llm),
         "context_precision": ContextPrecision(llm=evaluator_llm),
         "faithfulness": Faithfulness(llm=evaluator_llm),
@@ -76,6 +83,7 @@ def rag_task(*, item, **kwargs):
 # Each evaluator is called per item with (*, input, output, expected_output, **kwargs)
 # and must return an Evaluation object.
 
+
 # Scorers are initialised in main() and injected via closure.
 # Evaluators are async because Langfuse run_experiment() runs in an
 # async context, and RAGAS requires ascore() (not score()) inside one.
@@ -92,11 +100,15 @@ def make_evaluators(scorers):
         except Exception as e:
             print(f"   WARN: answer_correctness failed: {e}")
             # Return a score of 0.0 with a comment — Langfuse rejects None values
-            return Evaluation(name="answer_correctness", value=0.0, comment=f"FAILED: {e}")
+            return Evaluation(
+                name="answer_correctness", value=0.0, comment=f"FAILED: {e}"
+            )
 
     async def context_recall_evaluator(*, input, output, expected_output, **kwargs):
         if not output["contexts"]:
-            return Evaluation(name="context_recall", value=0.0, comment="No contexts retrieved")
+            return Evaluation(
+                name="context_recall", value=0.0, comment="No contexts retrieved"
+            )
         try:
             result = await scorers["context_recall"].ascore(
                 user_input=input["question"],
@@ -110,7 +122,9 @@ def make_evaluators(scorers):
 
     async def faithfulness_evaluator(*, input, output, expected_output, **kwargs):
         if not output["contexts"]:
-            return Evaluation(name="faithfulness", value=0.0, comment="No contexts retrieved")
+            return Evaluation(
+                name="faithfulness", value=0.0, comment="No contexts retrieved"
+            )
         try:
             result = await scorers["faithfulness"].ascore(
                 user_input=input["question"],
@@ -124,7 +138,9 @@ def make_evaluators(scorers):
 
     async def context_precision_evaluator(*, input, output, expected_output, **kwargs):
         if not output["contexts"]:
-            return Evaluation(name="context_precision", value=0.0, comment="No contexts retrieved")
+            return Evaluation(
+                name="context_precision", value=0.0, comment="No contexts retrieved"
+            )
         try:
             result = await scorers["context_precision"].ascore(
                 user_input=input["question"],
@@ -134,7 +150,9 @@ def make_evaluators(scorers):
             return Evaluation(name="context_precision", value=float(result.value))
         except Exception as e:
             print(f"   WARN: context_precision failed: {e}")
-            return Evaluation(name="context_precision", value=0.0, comment=f"FAILED: {e}")
+            return Evaluation(
+                name="context_precision", value=0.0, comment=f"FAILED: {e}"
+            )
 
     return [
         answer_correctness_evaluator,

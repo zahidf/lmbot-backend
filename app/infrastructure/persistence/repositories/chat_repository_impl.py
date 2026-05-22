@@ -9,7 +9,7 @@ import uuid
 
 class ChatRepositoryImpl(ChatRepository):
     """PostgreSQL implementation of chat repository"""
-    
+
     def __init__(self, session: AsyncSession):
         self.session = session
 
@@ -22,14 +22,14 @@ class ChatRepositoryImpl(ChatRepository):
             query=model.query,
             response=model.response,
             source_document_ids=model.source_document_ids or [],
-            created_at=model.created_at
+            created_at=model.created_at,
         )
 
     async def save(self, message: ChatMessage) -> ChatMessage:
         """Save chat message to database"""
         if not message.session_id:
             raise ValueError("session_id is required to save a chat message")
-        
+
         model = ChatMessageModel(
             id=uuid.uuid4() if not message.id else uuid.UUID(message.id),
             user_id=uuid.UUID(message.user_id),
@@ -37,19 +37,15 @@ class ChatRepositoryImpl(ChatRepository):
             query=message.query,
             response=message.response,
             source_document_ids=message.source_document_ids,
-            created_at=message.created_at
+            created_at=message.created_at,
         )
-        
+
         self.session.add(model)
         await self.session.flush()
 
         return self._to_entity(model)
-    
-    async def find_by_user_id(
-        self,
-        user_id: str,
-        limit: int = 10
-    ) -> List[ChatMessage]:
+
+    async def find_by_user_id(self, user_id: str, limit: int = 10) -> List[ChatMessage]:
         """Get chat history for user"""
         result = await self.session.execute(
             select(ChatMessageModel)
@@ -57,14 +53,12 @@ class ChatRepositoryImpl(ChatRepository):
             .order_by(desc(ChatMessageModel.created_at))
             .limit(limit)
         )
-        
+
         models = result.scalars().all()
         return [self._to_entity(model) for model in models]
-    
+
     async def find_by_session_id(
-        self,
-        session_id: str,
-        limit: int = 50
+        self, session_id: str, limit: int = 50
     ) -> List[ChatMessage]:
         """Get all messages for a session, ordered chronologically"""
         result = await self.session.execute(
@@ -73,6 +67,6 @@ class ChatRepositoryImpl(ChatRepository):
             .order_by(ChatMessageModel.created_at)
             .limit(limit)
         )
-        
+
         models = result.scalars().all()
         return [self._to_entity(model) for model in models]

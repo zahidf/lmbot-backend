@@ -5,6 +5,7 @@ from datetime import datetime
 
 class DocumentUploadResponse(BaseModel):
     """Document upload response schema"""
+
     id: str
     title: str
     file_name: str
@@ -16,7 +17,7 @@ class DocumentUploadResponse(BaseModel):
     is_processed: bool
     chunk_count: int
     created_at: datetime
-    
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -30,7 +31,7 @@ class DocumentUploadResponse(BaseModel):
                 "category": "Manual",
                 "is_processed": False,
                 "chunk_count": 0,
-                "created_at": "2026-01-28T09:33:09Z"
+                "created_at": "2026-01-28T09:33:09Z",
             }
         }
     )
@@ -38,6 +39,7 @@ class DocumentUploadResponse(BaseModel):
 
 class DocumentListItem(BaseModel):
     """Document list item schema"""
+
     id: str
     title: str
     file_name: str
@@ -51,11 +53,13 @@ class DocumentListItem(BaseModel):
 
 class DocumentListResponse(BaseModel):
     """Document list response schema"""
+
     documents: List[DocumentListItem]
     total: int
 
 
 class DocumentDeleteResponse(BaseModel):
     """Document delete response schema"""
+
     message: str
     id: str

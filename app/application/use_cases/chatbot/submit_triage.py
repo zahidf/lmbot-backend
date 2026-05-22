@@ -5,10 +5,16 @@ from app.domain.entities.chat_triage import ChatTriage
 from app.domain.entities.chat_session import ChatSession
 from app.domain.entities.ticket import Ticket
 from app.domain.entities.ticket_activity import TicketActivity
-from app.application.interfaces.repositories.chat_triage_repository import ChatTriageRepository
-from app.application.interfaces.repositories.chat_session_repository import ChatSessionRepository
+from app.application.interfaces.repositories.chat_triage_repository import (
+    ChatTriageRepository,
+)
+from app.application.interfaces.repositories.chat_session_repository import (
+    ChatSessionRepository,
+)
 from app.application.interfaces.repositories.ticket_repository import TicketRepository
-from app.application.interfaces.repositories.ticket_activity_repository import TicketActivityRepository
+from app.application.interfaces.repositories.ticket_activity_repository import (
+    TicketActivityRepository,
+)
 from app.application.dtos.triage_dtos import TriageSubmissionDTO, TriageResponseDTO
 
 
@@ -79,7 +85,9 @@ class SubmitTriage:
                 )
         else:
             category_label = ChatTriage.ISSUE_CATEGORIES[dto.issue_category]
-            series_label = f"{dto.burner_series} Series" if dto.burner_series else "Unknown Burner"
+            series_label = (
+                f"{dto.burner_series} Series" if dto.burner_series else "Unknown Burner"
+            )
             title = f"{series_label} — {category_label}"
 
             session = ChatSession(

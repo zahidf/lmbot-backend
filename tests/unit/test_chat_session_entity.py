@@ -23,19 +23,25 @@ class TestChatSession:
 
     def test_create_with_none_id(self):
         now = datetime.now(UTC)
-        session = ChatSession(id=None, user_id="user-123", title="Test", created_at=now, updated_at=now)
+        session = ChatSession(
+            id=None, user_id="user-123", title="Test", created_at=now, updated_at=now
+        )
         assert session.id is None
 
     def test_create_with_none_title(self):
         now = datetime.now(UTC)
-        session = ChatSession(id="s1", user_id="user-123", title=None, created_at=now, updated_at=now)
+        session = ChatSession(
+            id="s1", user_id="user-123", title=None, created_at=now, updated_at=now
+        )
         assert session.title is None
 
     # Title update
 
     def _make_session(self) -> ChatSession:
         now = datetime.now(UTC)
-        return ChatSession(id="s1", user_id="user-1", title="Old Title", created_at=now, updated_at=now)
+        return ChatSession(
+            id="s1", user_id="user-1", title="Old Title", created_at=now, updated_at=now
+        )
 
     def test_update_title_short(self):
         session = self._make_session()

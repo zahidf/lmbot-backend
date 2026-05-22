@@ -13,7 +13,9 @@ from ...interfaces.repositories.chat_session_repository import ChatSessionReposi
 from ...interfaces.repositories.chat_triage_repository import ChatTriageRepository
 from ...interfaces.repositories.vector_store_repository import VectorStoreRepository
 from ...interfaces.repositories.ticket_repository import TicketRepository
-from ...interfaces.repositories.ticket_activity_repository import TicketActivityRepository
+from ...interfaces.repositories.ticket_activity_repository import (
+    TicketActivityRepository,
+)
 from ...interfaces.services.llm_service import LLMService
 from ...dtos.chat_dtos import ChatQueryDTO, ChatResponseDTO
 from ....domain.entities.chat_message import ChatMessage
@@ -69,7 +71,9 @@ class ProcessChatQuery:
     @staticmethod
     def _cannot_answer(response: str) -> bool:
         lower = response.lower()
-        return any(phrase in lower for phrase in ProcessChatQuery._CANNOT_ANSWER_PHRASES)
+        return any(
+            phrase in lower for phrase in ProcessChatQuery._CANNOT_ANSWER_PHRASES
+        )
 
     async def _create_ticket_for_session(self, session_id: str, user_id: str) -> Ticket:
         now = datetime.now(timezone.utc)
@@ -97,9 +101,7 @@ class ProcessChatQuery:
         return ticket
 
     async def execute(
-        self,
-        dto: ChatQueryDTO,
-        filters: Optional[Dict[str, Any]] = None
+        self, dto: ChatQueryDTO, filters: Optional[Dict[str, Any]] = None
     ) -> ChatResponseDTO:
 
         is_new_session = not dto.session_id
@@ -118,7 +120,7 @@ class ProcessChatQuery:
 
             await self.chat_session_repository.update_title(
                 session_id=session.id,
-                title=session.title or ChatSession.generate_title_from_query(dto.query)
+                title=session.title or ChatSession.generate_title_from_query(dto.query),
             )
         else:
             session = ChatSession(
@@ -126,7 +128,7 @@ class ProcessChatQuery:
                 user_id=dto.user_id,
                 title=ChatSession.generate_title_from_query(dto.query),
                 created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc)
+                updated_at=datetime.now(timezone.utc),
             )
             session = await self.chat_session_repository.create(session)
 
@@ -140,24 +142,25 @@ class ProcessChatQuery:
             triage_context = triage.get_context_summary()
 
             # Auto-apply burner series filter from triage
-            if triage.burner_series and (filters is None or 'product_series' not in filters):
+            if triage.burner_series and (
+                filters is None or "product_series" not in filters
+            ):
                 filters = filters or {}
-                filters['product_series'] = triage.burner_series
+                filters["product_series"] = triage.burner_series
 
         # Generate embedding for query
         query_embedding = await self.llm_service.generate_embedding(dto.query)
 
         # Retrieve relevant documents
         retrieved_chunks = await self.vector_store_repository.similarity_search(
-            query_embedding=query_embedding,
-            k=self.TOP_K,
-            filters=filters
+            query_embedding=query_embedding, k=self.TOP_K, filters=filters
         )
 
         # Filter by similarity threshold
         relevant_chunks = [
-            chunk for chunk in retrieved_chunks
-            if chunk['similarity_score'] >= self.SIMILARITY_THRESHOLD
+            chunk
+            for chunk in retrieved_chunks
+            if chunk["similarity_score"] >= self.SIMILARITY_THRESHOLD
         ]
 
         if not relevant_chunks:
@@ -174,7 +177,7 @@ class ProcessChatQuery:
                 query=dto.query,
                 response=response_text,
                 source_document_ids=[],
-                created_at=datetime.now(timezone.utc)
+                created_at=datetime.now(timezone.utc),
             )
             saved_message = await self.chat_repository.save(chat_message)
 
@@ -192,7 +195,7 @@ class ProcessChatQuery:
             )
 
         # Extract context
-        context_documents = [chunk['content'] for chunk in relevant_chunks]
+        context_documents = [chunk["content"] for chunk in relevant_chunks]
 
         # Build query with triage context
         enriched_query = dto.query
@@ -205,8 +208,7 @@ class ProcessChatQuery:
             )
 
         response = await self.llm_service.generate_response(
-            query=enriched_query,
-            context_documents=context_documents
+            query=enriched_query, context_documents=context_documents
         )
 
         # Detect whether LLM acknowledged it could not answer despite having chunks
@@ -223,18 +225,18 @@ class ProcessChatQuery:
             session_id=session.id,
             query=dto.query,
             response=response,
-            source_document_ids=[chunk['id'] for chunk in relevant_chunks],
-            created_at=datetime.now(timezone.utc)
+            source_document_ids=[chunk["id"] for chunk in relevant_chunks],
+            created_at=datetime.now(timezone.utc),
         )
 
         saved_message = await self.chat_repository.save(chat_message)
 
         sources = [
             {
-                'document_id': chunk['document_id'],
-                'content': chunk['content'],
-                'similarity_score': chunk['similarity_score'],
-                'metadata': chunk['metadata']
+                "document_id": chunk["document_id"],
+                "content": chunk["content"],
+                "similarity_score": chunk["similarity_score"],
+                "metadata": chunk["metadata"],
             }
             for chunk in relevant_chunks
         ]
@@ -251,9 +253,7 @@ class ProcessChatQuery:
         )
 
     async def stream(
-        self,
-        dto: ChatQueryDTO,
-        filters: Optional[Dict[str, Any]] = None
+        self, dto: ChatQueryDTO, filters: Optional[Dict[str, Any]] = None
     ) -> AsyncIterator[str]:
         """Stream a chat response as SSE events.
 
@@ -278,7 +278,8 @@ class ProcessChatQuery:
                     )
                 await self.chat_session_repository.update_title(
                     session_id=session.id,
-                    title=session.title or ChatSession.generate_title_from_query(dto.query)
+                    title=session.title
+                    or ChatSession.generate_title_from_query(dto.query),
                 )
             else:
                 session = ChatSession(
@@ -286,7 +287,7 @@ class ProcessChatQuery:
                     user_id=dto.user_id,
                     title=ChatSession.generate_title_from_query(dto.query),
                     created_at=datetime.now(timezone.utc),
-                    updated_at=datetime.now(timezone.utc)
+                    updated_at=datetime.now(timezone.utc),
                 )
                 session = await self.chat_session_repository.create(session)
 
@@ -297,19 +298,20 @@ class ProcessChatQuery:
             triage = await self.triage_repository.find_by_session_id(session.id)
             if triage:
                 triage_context = triage.get_context_summary()
-                if triage.burner_series and (filters is None or 'product_series' not in filters):
+                if triage.burner_series and (
+                    filters is None or "product_series" not in filters
+                ):
                     filters = filters or {}
-                    filters['product_series'] = triage.burner_series
+                    filters["product_series"] = triage.burner_series
 
             query_embedding = await self.llm_service.generate_embedding(dto.query)
             retrieved_chunks = await self.vector_store_repository.similarity_search(
-                query_embedding=query_embedding,
-                k=self.TOP_K,
-                filters=filters
+                query_embedding=query_embedding, k=self.TOP_K, filters=filters
             )
             relevant_chunks = [
-                c for c in retrieved_chunks
-                if c['similarity_score'] >= self.SIMILARITY_THRESHOLD
+                c
+                for c in retrieved_chunks
+                if c["similarity_score"] >= self.SIMILARITY_THRESHOLD
             ]
 
             yield f"data: {json.dumps({'type': 'metadata', 'session_id': str(session.id)})}\n\n"
@@ -327,14 +329,14 @@ class ProcessChatQuery:
                     query=dto.query,
                     response=response_text,
                     source_document_ids=[],
-                    created_at=datetime.now(timezone.utc)
+                    created_at=datetime.now(timezone.utc),
                 )
                 saved_message = await self.chat_repository.save(chat_message)
                 ticket = await self.ticket_repository.find_by_session_id(session.id)
                 yield f"data: {json.dumps({'type': 'done', 'message_id': str(saved_message.id), 'sources': [], 'can_escalate': True, 'ticket_id': str(ticket.id) if ticket else None, 'response': response_text})}\n\n"
                 return
 
-            context_documents = [chunk['content'] for chunk in relevant_chunks]
+            context_documents = [chunk["content"] for chunk in relevant_chunks]
             enriched_query = dto.query
             if triage_context:
                 enriched_query = (
@@ -345,7 +347,9 @@ class ProcessChatQuery:
                 )
 
             full_response = []
-            async for token in self.llm_service.stream_response(enriched_query, context_documents):
+            async for token in self.llm_service.stream_response(
+                enriched_query, context_documents
+            ):
                 full_response.append(token)
                 yield f"data: {json.dumps({'type': 'token', 'content': token})}\n\n"
 
@@ -363,17 +367,17 @@ class ProcessChatQuery:
                 session_id=session.id,
                 query=dto.query,
                 response=response_text,
-                source_document_ids=[chunk['id'] for chunk in relevant_chunks],
-                created_at=datetime.now(timezone.utc)
+                source_document_ids=[chunk["id"] for chunk in relevant_chunks],
+                created_at=datetime.now(timezone.utc),
             )
             saved_message = await self.chat_repository.save(chat_message)
 
             sources = [
                 {
-                    'document_id': chunk['document_id'],
-                    'content': chunk['content'],
-                    'similarity_score': chunk['similarity_score'],
-                    'metadata': chunk['metadata']
+                    "document_id": chunk["document_id"],
+                    "content": chunk["content"],
+                    "similarity_score": chunk["similarity_score"],
+                    "metadata": chunk["metadata"],
                 }
                 for chunk in relevant_chunks
             ]

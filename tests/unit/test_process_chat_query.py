@@ -22,7 +22,7 @@ class TestProcessChatQuery:
             query="What is task decomposition?",
             response="Task decomposition is a technique...",
             source_document_ids=["doc-1", "doc-2"],
-            created_at=datetime.now(UTC)
+            created_at=datetime.now(UTC),
         )
         return repo
 
@@ -35,7 +35,7 @@ class TestProcessChatQuery:
             user_id="user-123",
             title="What is task decomposition?",
             created_at=datetime.now(UTC),
-            updated_at=datetime.now(UTC)
+            updated_at=datetime.now(UTC),
         )
         return repo
 
@@ -56,15 +56,15 @@ class TestProcessChatQuery:
                 "document_id": "doc-1",
                 "content": "Task decomposition can be done in three ways: (1) by LLM with simple prompting...",
                 "similarity_score": 0.92,
-                "metadata": {"source": "blog-post"}
+                "metadata": {"source": "blog-post"},
             },
             {
                 "id": "chunk-2",
                 "document_id": "doc-2",
                 "content": "Common extensions include Chain of Thought and Tree of Thoughts...",
                 "similarity_score": 0.87,
-                "metadata": {"source": "blog-post"}
-            }
+                "metadata": {"source": "blog-post"},
+            },
         ]
         return repo
 
@@ -104,7 +104,16 @@ class TestProcessChatQuery:
         return AsyncMock()
 
     @pytest.fixture
-    def use_case(self, mock_chat_repository, mock_chat_session_repository, mock_triage_repository, mock_vector_store, mock_llm_service, mock_ticket_repository, mock_ticket_activity_repository):
+    def use_case(
+        self,
+        mock_chat_repository,
+        mock_chat_session_repository,
+        mock_triage_repository,
+        mock_vector_store,
+        mock_llm_service,
+        mock_ticket_repository,
+        mock_ticket_activity_repository,
+    ):
         """Create use case with mocked dependencies"""
         return ProcessChatQuery(
             chat_repository=mock_chat_repository,
@@ -115,38 +124,51 @@ class TestProcessChatQuery:
             ticket_repository=mock_ticket_repository,
             ticket_activity_repository=mock_ticket_activity_repository,
         )
-    
+
     @pytest.mark.asyncio
-    async def test_process_simple_query(self, use_case, mock_llm_service, mock_vector_store):
+    async def test_process_simple_query(
+        self, use_case, mock_llm_service, mock_vector_store
+    ):
         """Test processing a simple query"""
         # Arrange
-        dto = ChatQueryDTO(
-            user_id="user-123",
-            query="What is task decomposition?"
-        )
-        
+        dto = ChatQueryDTO(user_id="user-123", query="What is task decomposition?")
+
         # Act
         result = await use_case.execute(dto)
-        
+
         # Assert
         assert isinstance(result, ChatResponseDTO)
         assert result.query == "What is task decomposition?"
         assert result.response is not None
         assert len(result.response) > 0
         assert len(result.sources) > 0
-        
+
         # Verify service calls
         mock_llm_service.generate_embedding.assert_called_once_with(dto.query)
         mock_vector_store.similarity_search.assert_called_once()
         mock_llm_service.generate_response.assert_called_once()
-    
+
     @pytest.mark.asyncio
-    async def test_process_query_with_high_similarity_threshold(self, use_case, mock_vector_store):
+    async def test_process_query_with_high_similarity_threshold(
+        self, use_case, mock_vector_store
+    ):
         """Test that only high-similarity documents are used"""
         # Arrange
         mock_vector_store.similarity_search.return_value = [
-            {"id": "1", "document_id": "doc-1", "content": "High relevance", "similarity_score": 0.85, "metadata": {}},
-            {"id": "2", "document_id": "doc-2", "content": "Low relevance", "similarity_score": 0.20, "metadata": {}},
+            {
+                "id": "1",
+                "document_id": "doc-1",
+                "content": "High relevance",
+                "similarity_score": 0.85,
+                "metadata": {},
+            },
+            {
+                "id": "2",
+                "document_id": "doc-2",
+                "content": "Low relevance",
+                "similarity_score": 0.20,
+                "metadata": {},
+            },
         ]
 
         dto = ChatQueryDTO(user_id="user-123", query="Test query")
@@ -157,21 +179,23 @@ class TestProcessChatQuery:
         # Assert - should only include sources above SIMILARITY_THRESHOLD (0.3)
         assert len(result.sources) == 1
         assert result.sources[0]["similarity_score"] >= 0.3
-    
+
     @pytest.mark.asyncio
-    async def test_process_query_no_relevant_documents(self, use_case, mock_vector_store):
+    async def test_process_query_no_relevant_documents(
+        self, use_case, mock_vector_store
+    ):
         """Test handling when no relevant documents are found"""
         # Arrange
         mock_vector_store.similarity_search.return_value = []
         dto = ChatQueryDTO(user_id="user-123", query="Unknown topic")
-        
+
         # Act
         result = await use_case.execute(dto)
-        
+
         # Assert
         assert "couldn't find relevant information" in result.response.lower()
         assert len(result.sources) == 0
-    
+
     @pytest.mark.asyncio
     async def test_saves_chat_message(self, use_case, mock_chat_repository):
         """Test that chat message is saved to repository"""
@@ -301,7 +325,9 @@ class TestProcessChatQuery:
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
         )
-        dto = ChatQueryDTO(user_id="user-123", query="Test query", session_id="session-existing")
+        dto = ChatQueryDTO(
+            user_id="user-123", query="Test query", session_id="session-existing"
+        )
         await use_case.execute(dto)
 
         mock_ticket_repository.save.assert_not_called()

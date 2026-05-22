@@ -34,7 +34,9 @@ class TestChatTriage:
         assert triage.is_complete() is True
 
     def test_is_not_complete_when_no_series_and_not_unknown(self):
-        triage = self._make_triage(burner_series=None, burner_identified_via="direct_selection")
+        triage = self._make_triage(
+            burner_series=None, burner_identified_via="direct_selection"
+        )
         assert triage.is_complete() is False
 
     def test_is_not_complete_when_category_empty(self):
@@ -47,7 +49,10 @@ class TestChatTriage:
 
     @pytest.mark.parametrize("category", ["A", "B", "C", "D", "E", "F", "G"])
     def test_is_complete_all_valid_categories(self, category):
-        triage = self._make_triage(issue_category=category, issue_category_label=ChatTriage.ISSUE_CATEGORIES[category])
+        triage = self._make_triage(
+            issue_category=category,
+            issue_category_label=ChatTriage.ISSUE_CATEGORIES[category],
+        )
         assert triage.is_complete() is True
 
     # Serial Number Validation
@@ -129,7 +134,9 @@ class TestChatTriage:
         assert "Issue Description" not in summary
 
     def test_summary_with_follow_up_answers(self):
-        triage = self._make_triage(follow_up_answers={"has_power": "Yes", "fault_codes": "E1"})
+        triage = self._make_triage(
+            follow_up_answers={"has_power": "Yes", "fault_codes": "E1"}
+        )
         summary = triage.get_context_summary()
         assert "Additional Details:" in summary
         assert "has_power: Yes" in summary
@@ -151,7 +158,15 @@ class TestChatTriage:
     # Module-level constants
 
     def test_issue_categories_has_all_keys(self):
-        assert set(ChatTriage.ISSUE_CATEGORIES.keys()) == {"A", "B", "C", "D", "E", "F", "G"}
+        assert set(ChatTriage.ISSUE_CATEGORIES.keys()) == {
+            "A",
+            "B",
+            "C",
+            "D",
+            "E",
+            "F",
+            "G",
+        }
 
     def test_burner_series_contains_expected_values(self):
         assert set(ChatTriage.BURNER_SERIES) == {"FD", "TX", "DB", "FDB"}

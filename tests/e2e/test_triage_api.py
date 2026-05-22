@@ -61,7 +61,9 @@ class TestTriageFollowUpsAPI:
         """All valid categories A-G return 200"""
         for category in ["A", "B", "C", "D", "E", "F", "G"]:
             response = client.get(f"/api/v1/chat/triage/follow-ups/{category}")
-            assert response.status_code == 200, f"Category {category} returned {response.status_code}"
+            assert (
+                response.status_code == 200
+            ), f"Category {category} returned {response.status_code}"
 
     def test_get_follow_ups_invalid_category(self, client):
         """Invalid category returns 400 with descriptive error"""

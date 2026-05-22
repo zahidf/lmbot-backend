@@ -2,7 +2,9 @@ import os
 import pytest
 from pathlib import Path
 from unittest.mock import patch
-from app.infrastructure.external_services.local_file_storage_service import LocalFileStorageService
+from app.infrastructure.external_services.local_file_storage_service import (
+    LocalFileStorageService,
+)
 
 
 class TestLocalFileStorageService:

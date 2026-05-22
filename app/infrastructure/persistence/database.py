@@ -26,7 +26,7 @@ async_session_factory = async_sessionmaker(
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Dependency for getting database session
-    
+
     Usage:
         async def my_function(db: AsyncSession = Depends(get_db)):
             # Use db session
@@ -54,12 +54,14 @@ async def init_db():
         ChatTriageModel,
         TicketModel,
         TicketActivityModel,
+        LibraryFolderModel,
+        LibraryFileModel,
     )
-    
+
     async with engine.begin() as conn:
         # Create all tables
         await conn.run_sync(Base.metadata.create_all)
-        
+
         print("Database tables created successfully")
 
 

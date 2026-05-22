@@ -55,7 +55,9 @@ class TicketRepositoryImpl(TicketRepository):
         model = result.scalar_one_or_none()
         return self._to_entity(model) if model else None
 
-    async def find_by_user_id(self, user_id: str, limit: int = 20, offset: int = 0) -> List[Ticket]:
+    async def find_by_user_id(
+        self, user_id: str, limit: int = 20, offset: int = 0
+    ) -> List[Ticket]:
         result = await self.session.execute(
             select(TicketModel)
             .where(TicketModel.user_id == uuid.UUID(user_id))

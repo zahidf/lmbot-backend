@@ -37,7 +37,9 @@ class TestProcessDocument:
     def mock_document_processor(self):
         """Mock document processor service"""
         processor = AsyncMock()
-        processor.extract_text.return_value = "This is sample extracted text from the document. " * 50
+        processor.extract_text.return_value = (
+            "This is sample extracted text from the document. " * 50
+        )
         return processor
 
     @pytest.fixture
@@ -47,7 +49,7 @@ class TestProcessDocument:
         chunker.chunk_text.return_value = [
             "This is chunk 1 with some content.",
             "This is chunk 2 with more content.",
-            "This is chunk 3 with final content."
+            "This is chunk 3 with final content.",
         ]
         return chunker
 
@@ -66,7 +68,7 @@ class TestProcessDocument:
             uploaded_by="user-123",
             is_processed=False,
             chunk_count=0,
-            created_at=datetime.now(timezone.utc)
+            created_at=datetime.now(timezone.utc),
         )
 
     @pytest.fixture
@@ -77,7 +79,7 @@ class TestProcessDocument:
         mock_llm_service,
         mock_file_storage_service,
         mock_document_processor,
-        mock_text_chunker
+        mock_text_chunker,
     ):
         """Create use case with mocked dependencies"""
         return ProcessDocument(
@@ -86,7 +88,7 @@ class TestProcessDocument:
             llm_service=mock_llm_service,
             file_storage_service=mock_file_storage_service,
             document_processor=mock_document_processor,
-            text_chunker=mock_text_chunker
+            text_chunker=mock_text_chunker,
         )
 
     @pytest.mark.asyncio
@@ -97,13 +99,15 @@ class TestProcessDocument:
         mock_document_processor,
         mock_text_chunker,
         mock_llm_service,
-        sample_document
+        sample_document,
     ):
         """Test successful document processing"""
         # Arrange
         mock_document_repository.find_by_id.return_value = sample_document
 
-        with patch.object(use_case, '_store_chunk', new_callable=AsyncMock) as mock_store:
+        with patch.object(
+            use_case, "_store_chunk", new_callable=AsyncMock
+        ) as mock_store:
             # Act
             result = await use_case.execute("doc-123")
 
@@ -118,8 +122,7 @@ class TestProcessDocument:
         # Verify calls
         mock_document_repository.find_by_id.assert_called_once_with("doc-123")
         mock_document_processor.extract_text.assert_called_once_with(
-            file_content=b"fake file bytes",
-            file_type="pdf"
+            file_content=b"fake file bytes", file_type="pdf"
         )
         mock_text_chunker.chunk_text.assert_called_once()
         assert mock_llm_service.generate_embedding.call_count == 3
@@ -142,10 +145,7 @@ class TestProcessDocument:
 
     @pytest.mark.asyncio
     async def test_process_document_already_processed(
-        self,
-        use_case,
-        mock_document_repository,
-        sample_document
+        self, use_case, mock_document_repository, sample_document
     ):
         """Test processing already processed document"""
         # Arrange
@@ -167,12 +167,14 @@ class TestProcessDocument:
         use_case,
         mock_document_repository,
         mock_document_processor,
-        sample_document
+        sample_document,
     ):
         """Test processing document with empty/short text"""
         # Arrange
         mock_document_repository.find_by_id.return_value = sample_document
-        mock_document_processor.extract_text.return_value = "Short"  # Less than 50 chars
+        mock_document_processor.extract_text.return_value = (
+            "Short"  # Less than 50 chars
+        )
 
         # Act & Assert
         with pytest.raises(ValueError, match="Extracted text is too short or empty"):
@@ -185,7 +187,7 @@ class TestProcessDocument:
         mock_document_repository,
         mock_document_processor,
         mock_text_chunker,
-        sample_document
+        sample_document,
     ):
         """Test processing when chunker returns empty list"""
         # Arrange
@@ -198,11 +200,7 @@ class TestProcessDocument:
 
     @pytest.mark.asyncio
     async def test_process_document_partial_chunk_failure(
-        self,
-        use_case,
-        mock_document_repository,
-        mock_llm_service,
-        sample_document
+        self, use_case, mock_document_repository, mock_llm_service, sample_document
     ):
         """Test processing with some chunks failing"""
         # Arrange
@@ -212,10 +210,12 @@ class TestProcessDocument:
         mock_llm_service.generate_embedding.side_effect = [
             [0.1] * 1536,
             Exception("Embedding failed"),
-            [0.2] * 1536
+            [0.2] * 1536,
         ]
 
-        with patch.object(use_case, '_store_chunk', new_callable=AsyncMock) as mock_store:
+        with patch.object(
+            use_case, "_store_chunk", new_callable=AsyncMock
+        ) as mock_store:
             # Act
             result = await use_case.execute("doc-123")
 
@@ -226,16 +226,14 @@ class TestProcessDocument:
 
     @pytest.mark.asyncio
     async def test_process_document_all_chunks_fail(
-        self,
-        use_case,
-        mock_document_repository,
-        mock_llm_service,
-        sample_document
+        self, use_case, mock_document_repository, mock_llm_service, sample_document
     ):
         """Test processing when all chunks fail"""
         # Arrange
         mock_document_repository.find_by_id.return_value = sample_document
-        mock_llm_service.generate_embedding.side_effect = Exception("Embedding service down")
+        mock_llm_service.generate_embedding.side_effect = Exception(
+            "Embedding service down"
+        )
 
         # Act & Assert
         with pytest.raises(ValueError, match="All chunks failed to process"):
@@ -243,11 +241,7 @@ class TestProcessDocument:
 
     @pytest.mark.asyncio
     async def test_process_document_chunk_metadata(
-        self,
-        use_case,
-        mock_document_repository,
-        mock_text_chunker,
-        sample_document
+        self, use_case, mock_document_repository, mock_text_chunker, sample_document
     ):
         """Test that chunk metadata is correctly populated"""
         # Arrange
@@ -260,7 +254,7 @@ class TestProcessDocument:
             nonlocal stored_metadata
             stored_metadata = metadata
 
-        with patch.object(use_case, '_store_chunk', side_effect=capture_store):
+        with patch.object(use_case, "_store_chunk", side_effect=capture_store):
             # Act
             await use_case.execute("doc-123")
 
@@ -282,7 +276,7 @@ class TestProcessDocument:
         use_case,
         mock_document_repository,
         mock_document_processor,
-        sample_document
+        sample_document,
     ):
         """Test processing DOCX file"""
         # Arrange
@@ -291,14 +285,13 @@ class TestProcessDocument:
         sample_document.file_path = "/uploads/manual.docx"
         mock_document_repository.find_by_id.return_value = sample_document
 
-        with patch.object(use_case, '_store_chunk', new_callable=AsyncMock):
+        with patch.object(use_case, "_store_chunk", new_callable=AsyncMock):
             # Act
             result = await use_case.execute("doc-123")
 
         # Assert
         mock_document_processor.extract_text.assert_called_once_with(
-            file_content=b"fake file bytes",
-            file_type="docx"
+            file_content=b"fake file bytes", file_type="docx"
         )
         assert result["status"] == "processed"
 
@@ -308,7 +301,7 @@ class TestProcessDocument:
         use_case,
         mock_document_repository,
         mock_document_processor,
-        sample_document
+        sample_document,
     ):
         """Test processing TXT file"""
         # Arrange
@@ -317,13 +310,12 @@ class TestProcessDocument:
         sample_document.file_path = "/uploads/notes.txt"
         mock_document_repository.find_by_id.return_value = sample_document
 
-        with patch.object(use_case, '_store_chunk', new_callable=AsyncMock):
+        with patch.object(use_case, "_store_chunk", new_callable=AsyncMock):
             # Act
             result = await use_case.execute("doc-123")
 
         # Assert
         mock_document_processor.extract_text.assert_called_once_with(
-            file_content=b"fake file bytes",
-            file_type="txt"
+            file_content=b"fake file bytes", file_type="txt"
         )
         assert result["status"] == "processed"

@@ -1,5 +1,7 @@
 import pytest
-from app.infrastructure.external_services.text_chunking_service import TextChunkerService
+from app.infrastructure.external_services.text_chunking_service import (
+    TextChunkerService,
+)
 
 
 class TestTextChunkerService:
@@ -75,7 +77,7 @@ class TestTextChunkerService:
 
         # Assert
         # Most chunks should end with a period (sentence boundary)
-        chunks_ending_with_period = sum(1 for c in chunks if c.rstrip().endswith('.'))
+        chunks_ending_with_period = sum(1 for c in chunks if c.rstrip().endswith("."))
         assert chunks_ending_with_period >= len(chunks) // 2
 
     def test_chunk_text_with_custom_settings(self, custom_service):
@@ -94,29 +96,30 @@ class TestTextChunkerService:
     def test_chunk_overlap(self, custom_service):
         """Test that consecutive chunks actually share overlapping content"""
         # Arrange - create text with unique markers
-        paragraphs = [f"Paragraph {i}. Unique content for paragraph {i}. " * 10 
-                    for i in range(5)]
+        paragraphs = [
+            f"Paragraph {i}. Unique content for paragraph {i}. " * 10 for i in range(5)
+        ]
         text = "\n\n".join(paragraphs)
-        
+
         # Act
         chunks = custom_service.chunk_text(text)
 
         assert len(chunks) >= 2
-        
+
         # if we have enough chunks
         if len(chunks) >= 2:
             # Check if chunks actually overlap by looking at endings/beginnings
             for i in range(len(chunks) - 1):
                 chunk_end = chunks[i][-100:]  # Last 100 chars of chunk i
                 chunk_start = chunks[i + 1][:100]  # First 100 chars of chunk i+1
-                
+
                 # Calculate overlap percentage
                 overlap_words = set(chunk_end.split()) & set(chunk_start.split())
-                
+
                 # Assert there's significant overlap
-                assert len(overlap_words) > 2, \
-                    f"Chunks {i} and {i+1} don't have meaningful overlap"
-    
+                assert (
+                    len(overlap_words) > 2
+                ), f"Chunks {i} and {i+1} don't have meaningful overlap"
 
     def test_chunk_text_whitespace_only(self, service):
         """Test chunking whitespace-only text"""
@@ -127,7 +130,7 @@ class TestTextChunkerService:
         chunks = service.chunk_text(text)
 
         # Assert
-        assert chunks == [] or all(c.strip() == '' for c in chunks)
+        assert chunks == [] or all(c.strip() == "" for c in chunks)
 
     def test_chunk_text_unicode(self, service):
         """Test chunking text with unicode characters"""
@@ -167,7 +170,9 @@ class TestTextChunkerService:
         assert len(chunks) >= 1
         # The long word should be preserved somewhere
         full_text = "".join(chunks)
-        assert long_word in full_text or len(long_word) > 1000  # Either preserved or too long
+        assert (
+            long_word in full_text or len(long_word) > 1000
+        )  # Either preserved or too long
 
     def test_chunk_text_large_document(self, service):
         """Test chunking a large document"""

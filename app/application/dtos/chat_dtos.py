@@ -8,6 +8,7 @@ from .ticket_dtos import TicketDetailDTO
 @dataclass
 class ChatQueryDTO:
     """Input DTO for chat query"""
+
     user_id: str
     query: str
     session_id: Optional[str] = None  # None = create new session
@@ -16,6 +17,7 @@ class ChatQueryDTO:
 @dataclass
 class ChatSourceDTO:
     """Source document in response"""
+
     document_id: str
     content: str
     similarity_score: float
@@ -25,6 +27,7 @@ class ChatSourceDTO:
 @dataclass
 class ChatResponseDTO:
     """Output DTO for chat response"""
+
     message_id: Optional[str]
     session_id: str
     query: str
@@ -38,6 +41,7 @@ class ChatResponseDTO:
 @dataclass
 class ChatSessionDTO:
     """Output DTO for chat session"""
+
     id: str
     user_id: str
     title: Optional[str]
@@ -48,6 +52,7 @@ class ChatSessionDTO:
 @dataclass
 class ChatSessionDetailDTO:
     """Output DTO for chat session with messages"""
+
     id: str
     user_id: str
     title: Optional[str]
@@ -59,6 +64,7 @@ class ChatSessionDetailDTO:
 @dataclass
 class SessionContextDTO:
     """Output DTO for session load."""
+
     session_id: str
     session_title: Optional[str]
     session_created_at: datetime

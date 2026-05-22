@@ -7,8 +7,10 @@ from app.presentation.api.v1 import chatbot
 from app.presentation.api.v1 import documents
 from app.presentation.api.v1 import triage
 from app.presentation.api.v1 import tickets
+from app.presentation.api.v1 import library
 
 settings = get_settings()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -16,11 +18,12 @@ async def lifespan(app: FastAPI):
     await init_db()
     yield
 
+
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description="AI-powered customer service platform",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # CORS
@@ -32,22 +35,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Health check
 @app.get("/")
 async def root():
     return {"message": "Lanemark Customer Service API", "status": "healthy"}
 
+
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
 
 # Routers
 app.include_router(chatbot.router, prefix="/api/v1", tags=["chatbot"])
 app.include_router(documents.router, prefix="/api/v1", tags=["documents"])
 app.include_router(triage.router, prefix="/api/v1", tags=["triage"])
 app.include_router(tickets.router, prefix="/api/v1", tags=["tickets"])
+app.include_router(library.router, prefix="/api/v1", tags=["library"])
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

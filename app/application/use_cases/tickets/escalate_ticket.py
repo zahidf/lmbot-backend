@@ -2,7 +2,9 @@ from datetime import datetime, timezone
 
 from app.application.dtos.ticket_dtos import EscalateTicketDTO, TicketResponseDTO
 from app.application.interfaces.repositories.ticket_repository import TicketRepository
-from app.application.interfaces.repositories.ticket_activity_repository import TicketActivityRepository
+from app.application.interfaces.repositories.ticket_activity_repository import (
+    TicketActivityRepository,
+)
 from app.application.interfaces.repositories.chat_repository import ChatRepository
 from app.application.interfaces.services.llm_service import LLMService
 from app.domain.entities.ticket_activity import TicketActivity
@@ -40,18 +42,23 @@ class EscalateTicket:
             raise PermissionError("You do not have permission to escalate this ticket")
 
         if ticket.status != "open":
-            raise ValueError(f"Ticket is already {ticket.status} and cannot be escalated again")
+            raise ValueError(
+                f"Ticket is already {ticket.status} and cannot be escalated again"
+            )
 
         messages = []
         if ticket.session_id:
-            chat_messages = await self.chat_repository.find_by_session_id(ticket.session_id)
+            chat_messages = await self.chat_repository.find_by_session_id(
+                ticket.session_id
+            )
             messages = [
-                {"query": m.query, "response": m.response}
-                for m in chat_messages
+                {"query": m.query, "response": m.response} for m in chat_messages
             ]
 
-        summary = await self.llm_service.generate_summary(messages) if messages else (
-            "No conversation history available."
+        summary = (
+            await self.llm_service.generate_summary(messages)
+            if messages
+            else ("No conversation history available.")
         )
 
         ticket.summary = summary

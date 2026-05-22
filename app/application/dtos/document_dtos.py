@@ -6,6 +6,7 @@ from typing import Optional, Any
 @dataclass
 class DocumentUploadDTO:
     """Input DTO for document upload"""
+
     file: Any  # FastAPI UploadFile
     title: str
     product_series: Optional[str]
@@ -16,6 +17,7 @@ class DocumentUploadDTO:
 @dataclass
 class DocumentUploadResponseDTO:
     """Output DTO for document upload"""
+
     id: str
     title: str
     file_name: str
@@ -32,6 +34,7 @@ class DocumentUploadResponseDTO:
 @dataclass
 class DocumentListDTO:
     """DTO for listing documents"""
+
     id: str
     title: str
     file_name: str

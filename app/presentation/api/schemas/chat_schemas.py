@@ -7,14 +7,15 @@ from .ticket_schemas import TicketDetailResponse
 
 class ChatQueryRequest(BaseModel):
     """Chat query request schema"""
+
     query: str = Field(min_length=1, max_length=2000)
     session_id: Optional[str] = None  # None = create new chat session
-    
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "query": "What is the maintenance schedule for TX Series burners?",
-                "session_id": None
+                "session_id": None,
             }
         }
     )
@@ -22,6 +23,7 @@ class ChatQueryRequest(BaseModel):
 
 class ChatSourceResponse(BaseModel):
     """Source document used for response"""
+
     document_id: str
     content: str
     similarity_score: float
@@ -30,6 +32,7 @@ class ChatSourceResponse(BaseModel):
 
 class ChatResponse(BaseModel):
     """Chat response schema"""
+
     message_id: Optional[str]
     session_id: str
     query: str
@@ -38,7 +41,7 @@ class ChatResponse(BaseModel):
     created_at: datetime
     can_escalate: bool = False
     ticket_id: Optional[str] = None
-    
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -51,10 +54,10 @@ class ChatResponse(BaseModel):
                         "document_id": "doc-123",
                         "content": "Monthly maintenance includes...",
                         "similarity_score": 0.95,
-                        "metadata": {"product_series": "TX"}
+                        "metadata": {"product_series": "TX"},
                     }
                 ],
-                "created_at": "2026-01-28T09:33:09Z"
+                "created_at": "2026-01-28T09:33:09Z",
             }
         }
     )
@@ -62,6 +65,7 @@ class ChatResponse(BaseModel):
 
 class ChatSessionResponse(BaseModel):
     """Chat session schema"""
+
     id: str
     title: Optional[str]
     created_at: datetime
@@ -70,6 +74,7 @@ class ChatSessionResponse(BaseModel):
 
 class ChatSessionDetailResponse(BaseModel):
     """Chat session with messages"""
+
     id: str
     title: Optional[str]
     messages: List[ChatResponse]
@@ -79,22 +84,26 @@ class ChatSessionDetailResponse(BaseModel):
 
 class ChatSessionListResponse(BaseModel):
     """List of chat sessions"""
+
     sessions: List[ChatSessionResponse]
     total: int
 
 
 class ChatSessionUpdateRequest(BaseModel):
     """Request to update session title"""
+
     title: str
 
 
 class ChatHistoryResponse(BaseModel):
     """Chat history response"""
+
     messages: List[ChatResponse]
 
 
 class SessionLoadResponse(BaseModel):
     """Session load"""
+
     session: ChatSessionResponse
     messages: List[ChatResponse]
     triage: Optional[TriageResponse] = None

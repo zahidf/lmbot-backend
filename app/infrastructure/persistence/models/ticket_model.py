@@ -12,16 +12,16 @@ class TicketModel(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id = Column(
         UUID(as_uuid=True),
-        ForeignKey('chat_sessions.id', ondelete='SET NULL'),
+        ForeignKey("chat_sessions.id", ondelete="SET NULL"),
         nullable=True,
         unique=True,
-        index=True
+        index=True,
     )
     user_id = Column(
         UUID(as_uuid=True),
-        ForeignKey('users.id', ondelete='CASCADE'),
+        ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
-        index=True
+        index=True,
     )
 
     summary = Column(Text, nullable=True)
@@ -31,18 +31,18 @@ class TicketModel(Base):
     created_at = Column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
-        nullable=False
+        nullable=False,
     )
     updated_at = Column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
-        nullable=False
+        nullable=False,
     )
 
     activities = relationship(
         "TicketActivityModel",
         back_populates="ticket",
         cascade="all, delete-orphan",
-        order_by="TicketActivityModel.created_at"
+        order_by="TicketActivityModel.created_at",
     )

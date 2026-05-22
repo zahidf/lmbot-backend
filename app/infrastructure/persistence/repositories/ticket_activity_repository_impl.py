@@ -3,9 +3,13 @@ from sqlalchemy import select
 from typing import List
 import uuid
 
-from app.application.interfaces.repositories.ticket_activity_repository import TicketActivityRepository
+from app.application.interfaces.repositories.ticket_activity_repository import (
+    TicketActivityRepository,
+)
 from app.domain.entities.ticket_activity import TicketActivity
-from app.infrastructure.persistence.models.ticket_activity_model import TicketActivityModel
+from app.infrastructure.persistence.models.ticket_activity_model import (
+    TicketActivityModel,
+)
 
 
 class TicketActivityRepositoryImpl(TicketActivityRepository):

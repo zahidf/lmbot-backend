@@ -15,8 +15,12 @@ from ..dependencies import (
 )
 from ....application.use_cases.tickets.escalate_ticket import EscalateTicket
 from ....application.dtos.ticket_dtos import EscalateTicketDTO
-from ....infrastructure.persistence.repositories.ticket_repository_impl import TicketRepositoryImpl
-from ....infrastructure.persistence.repositories.ticket_activity_repository_impl import TicketActivityRepositoryImpl
+from ....infrastructure.persistence.repositories.ticket_repository_impl import (
+    TicketRepositoryImpl,
+)
+from ....infrastructure.persistence.repositories.ticket_activity_repository_impl import (
+    TicketActivityRepositoryImpl,
+)
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 logger = logging.getLogger(__name__)
@@ -73,15 +77,21 @@ async def get_ticket_by_session(
     session_id: str,
     current_user=Depends(get_current_user),
     ticket_repo: TicketRepositoryImpl = Depends(get_ticket_repository),
-    activity_repo: TicketActivityRepositoryImpl = Depends(get_ticket_activity_repository),
+    activity_repo: TicketActivityRepositoryImpl = Depends(
+        get_ticket_activity_repository
+    ),
 ):
     """Get the ticket associated with a chat session."""
     ticket = await ticket_repo.find_by_session_id(session_id)
     if not ticket:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found"
+        )
 
     if ticket.user_id != current_user["id"]:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+        )
 
     activities = await activity_repo.find_by_ticket_id(ticket.id)
 
@@ -111,15 +121,21 @@ async def get_ticket(
     ticket_id: str,
     current_user=Depends(get_current_user),
     ticket_repo: TicketRepositoryImpl = Depends(get_ticket_repository),
-    activity_repo: TicketActivityRepositoryImpl = Depends(get_ticket_activity_repository),
+    activity_repo: TicketActivityRepositoryImpl = Depends(
+        get_ticket_activity_repository
+    ),
 ):
     """Get a ticket with its full activity timeline."""
     ticket = await ticket_repo.find_by_id(ticket_id)
     if not ticket:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found"
+        )
 
     if ticket.user_id != current_user["id"]:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+        )
 
     activities = await activity_repo.find_by_ticket_id(ticket_id)
 
@@ -149,7 +165,9 @@ async def escalate_ticket(
     ticket_id: str,
     current_user=Depends(get_current_user),
     use_case: EscalateTicket = Depends(get_escalate_ticket_use_case),
-    activity_repo: TicketActivityRepositoryImpl = Depends(get_ticket_activity_repository),
+    activity_repo: TicketActivityRepositoryImpl = Depends(
+        get_ticket_activity_repository
+    ),
 ):
     """
     Escalate an open ticket to the technical team.

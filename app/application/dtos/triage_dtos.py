@@ -6,21 +6,24 @@ from typing import Optional, Dict, Any, List
 @dataclass
 class TriageSubmissionDTO:
     """Input DTO for submitting completed triage"""
+
     user_id: str
     session_id: Optional[str]  # None = create new session
-    
+
     # Q1
     burner_series: Optional[str]
-    burner_identified_via: str  # "direct_selection" | "image_identification" | "unknown"
-    
+    burner_identified_via: (
+        str  # "direct_selection" | "image_identification" | "unknown"
+    )
+
     # Q2
     serial_number: Optional[str]
     has_serial_number: bool
-    
+
     # Q3
     issue_category: str
     issue_free_text: Optional[str] = None
-    
+
     # Q4
     follow_up_answers: Dict[str, Any] = field(default_factory=dict)
 
@@ -28,6 +31,7 @@ class TriageSubmissionDTO:
 @dataclass
 class TriageResponseDTO:
     """Output DTO after triage is saved"""
+
     triage_id: str
     session_id: str
     burner_series: Optional[str]
@@ -41,6 +45,7 @@ class TriageResponseDTO:
 @dataclass
 class TriageFollowUpPrompt:
     """Describes a follow-up question for a specific issue category"""
+
     question: str
     field_key: str
     input_type: str  # "buttons" | "text" | "select"
@@ -76,13 +81,23 @@ CATEGORY_FOLLOW_UPS: Dict[str, List[TriageFollowUpPrompt]] = {
             question="At what stage does the burner lock out?",
             field_key="lockout_stage",
             input_type="buttons",
-            options=["During pre-purge", "At ignition", "After flame established", "Not sure"],
+            options=[
+                "During pre-purge",
+                "At ignition",
+                "After flame established",
+                "Not sure",
+            ],
         ),
         TriageFollowUpPrompt(
             question="How long does the burner run before locking out?",
             field_key="run_duration",
             input_type="buttons",
-            options=["Less than 10 seconds", "10-30 seconds", "1-5 minutes", "More than 5 minutes"],
+            options=[
+                "Less than 10 seconds",
+                "10-30 seconds",
+                "1-5 minutes",
+                "More than 5 minutes",
+            ],
         ),
         TriageFollowUpPrompt(
             question="Any fault codes displayed?",
@@ -96,7 +111,13 @@ CATEGORY_FOLLOW_UPS: Dict[str, List[TriageFollowUpPrompt]] = {
             question="What symptoms are you experiencing?",
             field_key="symptoms",
             input_type="buttons",
-            options=["Unusual noise", "Yellow/smoky flame", "Flame lifting off", "Pulsating/rumbling", "Other"],
+            options=[
+                "Unusual noise",
+                "Yellow/smoky flame",
+                "Flame lifting off",
+                "Pulsating/rumbling",
+                "Other",
+            ],
         ),
         TriageFollowUpPrompt(
             question="Has anything changed recently (gas supply, controls, environment)?",
@@ -110,7 +131,12 @@ CATEGORY_FOLLOW_UPS: Dict[str, List[TriageFollowUpPrompt]] = {
             question="What stage are you at?",
             field_key="install_stage",
             input_type="buttons",
-            options=["Pre-installation planning", "Mid-installation", "Commissioning", "Post-commissioning issue"],
+            options=[
+                "Pre-installation planning",
+                "Mid-installation",
+                "Commissioning",
+                "Post-commissioning issue",
+            ],
         ),
         TriageFollowUpPrompt(
             question="Do you have the installation manual for this burner?",
@@ -124,7 +150,14 @@ CATEGORY_FOLLOW_UPS: Dict[str, List[TriageFollowUpPrompt]] = {
             question="What documentation do you need?",
             field_key="doc_type",
             input_type="buttons",
-            options=["Installation manual", "Wiring diagram", "Gas train schematic", "Spare parts list", "Data sheet", "Other"],
+            options=[
+                "Installation manual",
+                "Wiring diagram",
+                "Gas train schematic",
+                "Spare parts list",
+                "Data sheet",
+                "Other",
+            ],
         ),
     ],
     "F": [  # Spare Parts

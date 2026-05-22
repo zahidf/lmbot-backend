@@ -66,7 +66,13 @@ class TestEscalateTicket:
         return service
 
     @pytest.fixture
-    def use_case(self, mock_ticket_repository, mock_ticket_activity_repository, mock_chat_repository, mock_llm_service):
+    def use_case(
+        self,
+        mock_ticket_repository,
+        mock_ticket_activity_repository,
+        mock_chat_repository,
+        mock_llm_service,
+    ):
         return EscalateTicket(
             ticket_repository=mock_ticket_repository,
             ticket_activity_repository=mock_ticket_activity_repository,
@@ -86,13 +92,17 @@ class TestEscalateTicket:
         assert isinstance(result, TicketResponseDTO)
 
     @pytest.mark.asyncio
-    async def test_ticket_reassigned_to_technical_team(self, use_case, valid_dto, mock_ticket_repository):
+    async def test_ticket_reassigned_to_technical_team(
+        self, use_case, valid_dto, mock_ticket_repository
+    ):
         result = await use_case.execute(valid_dto)
         assert result.status == "escalated"
         assert result.assigned_to == "technical_team"
 
     @pytest.mark.asyncio
-    async def test_summary_populated_from_llm(self, use_case, valid_dto, mock_llm_service):
+    async def test_summary_populated_from_llm(
+        self, use_case, valid_dto, mock_llm_service
+    ):
         result = await use_case.execute(valid_dto)
         assert result.summary == mock_llm_service.generate_summary.return_value
 
@@ -118,7 +128,9 @@ class TestEscalateTicket:
         assert saved_activity.ticket_id == "ticket-123"
 
     @pytest.mark.asyncio
-    async def test_ticket_updated_in_repository(self, use_case, valid_dto, mock_ticket_repository):
+    async def test_ticket_updated_in_repository(
+        self, use_case, valid_dto, mock_ticket_repository
+    ):
         await use_case.execute(valid_dto)
         mock_ticket_repository.update.assert_called_once()
         updated = mock_ticket_repository.update.call_args[0][0]
@@ -154,7 +166,9 @@ class TestEscalateTicket:
     # ─── Error cases ──────────────────────────────────────────
 
     @pytest.mark.asyncio
-    async def test_raises_value_error_when_ticket_not_found(self, use_case, mock_ticket_repository):
+    async def test_raises_value_error_when_ticket_not_found(
+        self, use_case, mock_ticket_repository
+    ):
         mock_ticket_repository.find_by_id.return_value = None
         dto = EscalateTicketDTO(ticket_id="ghost-ticket", user_id="user-123")
 
@@ -162,15 +176,21 @@ class TestEscalateTicket:
             await use_case.execute(dto)
 
     @pytest.mark.asyncio
-    async def test_raises_permission_error_for_wrong_user(self, use_case, mock_ticket_repository):
-        mock_ticket_repository.find_by_id.return_value = _make_ticket(user_id="other-user")
+    async def test_raises_permission_error_for_wrong_user(
+        self, use_case, mock_ticket_repository
+    ):
+        mock_ticket_repository.find_by_id.return_value = _make_ticket(
+            user_id="other-user"
+        )
         dto = EscalateTicketDTO(ticket_id="ticket-123", user_id="user-123")
 
         with pytest.raises(PermissionError):
             await use_case.execute(dto)
 
     @pytest.mark.asyncio
-    async def test_raises_value_error_when_already_escalated(self, use_case, mock_ticket_repository):
+    async def test_raises_value_error_when_already_escalated(
+        self, use_case, mock_ticket_repository
+    ):
         mock_ticket_repository.find_by_id.return_value = _make_ticket(
             status="escalated", assigned_to="technical_team"
         )
@@ -180,7 +200,9 @@ class TestEscalateTicket:
             await use_case.execute(dto)
 
     @pytest.mark.asyncio
-    async def test_raises_value_error_when_resolved(self, use_case, mock_ticket_repository):
+    async def test_raises_value_error_when_resolved(
+        self, use_case, mock_ticket_repository
+    ):
         mock_ticket_repository.find_by_id.return_value = _make_ticket(status="resolved")
         dto = EscalateTicketDTO(ticket_id="ticket-123", user_id="user-123")
 
@@ -192,7 +214,9 @@ class TestEscalateTicket:
         self, use_case, mock_ticket_repository, valid_dto
     ):
         """Repository update is never called when ownership check fails"""
-        mock_ticket_repository.find_by_id.return_value = _make_ticket(user_id="other-user")
+        mock_ticket_repository.find_by_id.return_value = _make_ticket(
+            user_id="other-user"
+        )
 
         with pytest.raises(PermissionError):
             await use_case.execute(valid_dto)

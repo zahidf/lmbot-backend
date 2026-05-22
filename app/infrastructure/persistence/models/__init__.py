@@ -7,15 +7,19 @@ from .chat_session_model import ChatSessionModel
 from .chat_triage_model import ChatTriageModel
 from .ticket_model import TicketModel
 from .ticket_activity_model import TicketActivityModel
+from .library_folder_model import LibraryFolderModel
+from .library_file_model import LibraryFileModel
 
 __all__ = [
-    'Base',
-    'UserModel',
-    'DocumentModel',
-    'DocumentChunkModel',
-    'ChatSessionModel',
-    'ChatMessageModel',
-    'ChatTriageModel',
-    'TicketModel',
-    'TicketActivityModel',
+    "Base",
+    "UserModel",
+    "DocumentModel",
+    "DocumentChunkModel",
+    "ChatSessionModel",
+    "ChatMessageModel",
+    "ChatTriageModel",
+    "TicketModel",
+    "TicketActivityModel",
+    "LibraryFolderModel",
+    "LibraryFileModel",
 ]

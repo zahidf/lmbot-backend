@@ -3,17 +3,19 @@ from sqlalchemy import select
 from typing import Optional
 import uuid
 
-from app.application.interfaces.repositories.chat_triage_repository import ChatTriageRepository
+from app.application.interfaces.repositories.chat_triage_repository import (
+    ChatTriageRepository,
+)
 from app.domain.entities.chat_triage import ChatTriage
 from app.infrastructure.persistence.models.chat_triage_model import ChatTriageModel
 
 
 class ChatTriageRepositoryImpl(ChatTriageRepository):
     """PostgreSQL implementation of chat triage repository"""
-    
+
     def __init__(self, session: AsyncSession):
         self.session = session
-    
+
     def _to_entity(self, model: ChatTriageModel) -> ChatTriage:
         """Convert database model to domain entity"""
         return ChatTriage(
@@ -30,7 +32,7 @@ class ChatTriageRepositoryImpl(ChatTriageRepository):
             follow_up_answers=model.follow_up_answers or {},
             created_at=model.created_at,
         )
-    
+
     async def save(self, triage: ChatTriage) -> ChatTriage:
         """Save or update a triage record"""
         model = ChatTriageModel(
@@ -47,12 +49,12 @@ class ChatTriageRepositoryImpl(ChatTriageRepository):
             follow_up_answers=triage.follow_up_answers,
             created_at=triage.created_at,
         )
-        
+
         model = await self.session.merge(model)
         await self.session.flush()
-        
+
         return self._to_entity(model)
-    
+
     async def find_by_session_id(self, session_id: str) -> Optional[ChatTriage]:
         """Find triage by session ID"""
         result = await self.session.execute(
@@ -62,13 +64,11 @@ class ChatTriageRepositoryImpl(ChatTriageRepository):
         )
         model = result.scalar_one_or_none()
         return self._to_entity(model) if model else None
-    
+
     async def find_by_id(self, triage_id: str) -> Optional[ChatTriage]:
         """Find triage by ID"""
         result = await self.session.execute(
-            select(ChatTriageModel).where(
-                ChatTriageModel.id == uuid.UUID(triage_id)
-            )
+            select(ChatTriageModel).where(ChatTriageModel.id == uuid.UUID(triage_id))
         )
         model = result.scalar_one_or_none()
         return self._to_entity(model) if model else None

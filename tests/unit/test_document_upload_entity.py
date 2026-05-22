@@ -5,7 +5,7 @@ from app.domain.entities.document_upload import DocumentUpload
 
 class TestDocumentUpload:
     """Test DocumentUpload entity"""
-    
+
     def test_create_document_upload(self):
         """Test creating a document upload entity"""
         doc = DocumentUpload(
@@ -20,16 +20,16 @@ class TestDocumentUpload:
             uploaded_by="user-123",
             is_processed=False,
             chunk_count=0,
-            created_at=datetime.now(UTC)
+            created_at=datetime.now(UTC),
         )
-        
+
         assert doc.title == "TX Series Manual"
         assert doc.file_name == "tx_manual.pdf"
         assert doc.file_type == "pdf"
         assert doc.file_size == 1024000
         assert doc.product_series == "TX"
         assert doc.is_processed is False
-    
+
     def test_validate_file_type_pdf(self):
         """Test PDF file type validation"""
         doc = DocumentUpload(
@@ -44,11 +44,11 @@ class TestDocumentUpload:
             uploaded_by="user-123",
             is_processed=False,
             chunk_count=0,
-            created_at=datetime.now(UTC)
+            created_at=datetime.now(UTC),
         )
-        
+
         assert doc.is_valid_file_type() is True
-    
+
     def test_validate_file_type_docx(self):
         """Test DOCX file type validation"""
         doc = DocumentUpload(
@@ -63,11 +63,11 @@ class TestDocumentUpload:
             uploaded_by="user-123",
             is_processed=False,
             chunk_count=0,
-            created_at=datetime.now(UTC)
+            created_at=datetime.now(UTC),
         )
-        
+
         assert doc.is_valid_file_type() is True
-    
+
     def test_validate_file_type_txt(self):
         """Test TXT file type validation"""
         doc = DocumentUpload(
@@ -82,11 +82,11 @@ class TestDocumentUpload:
             uploaded_by="user-123",
             is_processed=False,
             chunk_count=0,
-            created_at=datetime.now(UTC)
+            created_at=datetime.now(UTC),
         )
-        
+
         assert doc.is_valid_file_type() is True
-    
+
     def test_validate_file_type_invalid(self):
         """Test invalid file type"""
         doc = DocumentUpload(
@@ -101,11 +101,11 @@ class TestDocumentUpload:
             uploaded_by="user-123",
             is_processed=False,
             chunk_count=0,
-            created_at=datetime.now(UTC)
+            created_at=datetime.now(UTC),
         )
-        
+
         assert doc.is_valid_file_type() is False
-    
+
     def test_validate_file_size_valid(self):
         """Test valid file size (under 50MB)"""
         doc = DocumentUpload(
@@ -120,11 +120,11 @@ class TestDocumentUpload:
             uploaded_by="user-123",
             is_processed=False,
             chunk_count=0,
-            created_at=datetime.now(UTC)
+            created_at=datetime.now(UTC),
         )
-        
+
         assert doc.is_valid_file_size() is True
-    
+
     def test_validate_file_size_too_large(self):
         """Test file size too large (over 50MB)"""
         doc = DocumentUpload(
@@ -139,11 +139,11 @@ class TestDocumentUpload:
             uploaded_by="user-123",
             is_processed=False,
             chunk_count=0,
-            created_at=datetime.now(UTC)
+            created_at=datetime.now(UTC),
         )
-        
+
         assert doc.is_valid_file_size() is False
-    
+
     def test_mark_as_processed(self):
         """Test marking document as processed"""
         doc = DocumentUpload(
@@ -158,10 +158,10 @@ class TestDocumentUpload:
             uploaded_by="user-123",
             is_processed=False,
             chunk_count=0,
-            created_at=datetime.now(UTC)
+            created_at=datetime.now(UTC),
         )
-        
+
         doc.mark_as_processed(chunk_count=10)
-        
+
         assert doc.is_processed is True
         assert doc.chunk_count == 10

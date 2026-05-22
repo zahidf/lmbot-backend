@@ -46,7 +46,9 @@ class SemanticTextChunkerService:
                 split_chunks.append(chunk)
 
         # Filter small chunks
-        filtered_chunks = [c for c in split_chunks if len(c.strip()) >= self.min_chunk_size]
+        filtered_chunks = [
+            c for c in split_chunks if len(c.strip()) >= self.min_chunk_size
+        ]
 
         # Overlap adjacent chunks
         if self.chunk_overlap > 0 and len(filtered_chunks) > 1:
@@ -60,8 +62,8 @@ class SemanticTextChunkerService:
             prefix = ""
             suffix = ""
             if i > 0:
-                prefix = chunks[i - 1][-self.chunk_overlap:]
+                prefix = chunks[i - 1][-self.chunk_overlap :]
             if i < len(chunks) - 1:
-                suffix = chunks[i + 1][:self.chunk_overlap]
+                suffix = chunks[i + 1][: self.chunk_overlap]
             overlapped.append(prefix + chunk + suffix)
         return overlapped

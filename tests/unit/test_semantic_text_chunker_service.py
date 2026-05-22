@@ -1,6 +1,8 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from app.infrastructure.external_services.semantic_text_chunking_service import SemanticTextChunkerService
+from app.infrastructure.external_services.semantic_text_chunking_service import (
+    SemanticTextChunkerService,
+)
 
 
 @pytest.fixture

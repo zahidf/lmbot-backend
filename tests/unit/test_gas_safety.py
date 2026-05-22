@@ -4,12 +4,14 @@ from unittest.mock import MagicMock
 
 # Mock langchain modules before importing the service,
 # since langchain_openai has a broken import in this environment.
-sys.modules.setdefault('langchain_openai', MagicMock())
-sys.modules.setdefault('langchain_core', MagicMock())
-sys.modules.setdefault('langchain_core.prompts', MagicMock())
-sys.modules.setdefault('langchain_core.output_parsers', MagicMock())
+sys.modules.setdefault("langchain_openai", MagicMock())
+sys.modules.setdefault("langchain_core", MagicMock())
+sys.modules.setdefault("langchain_core.prompts", MagicMock())
+sys.modules.setdefault("langchain_core.output_parsers", MagicMock())
 
-from app.infrastructure.external_services.langchain_llm_service import LangChainLLMService
+from app.infrastructure.external_services.langchain_llm_service import (
+    LangChainLLMService,
+)
 
 
 class TestGasSafetyDisclaimer:

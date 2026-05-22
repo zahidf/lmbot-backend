@@ -19,7 +19,9 @@ class TicketRepository(ABC):
         pass
 
     @abstractmethod
-    async def find_by_user_id(self, user_id: str, limit: int = 20, offset: int = 0) -> List[Ticket]:
+    async def find_by_user_id(
+        self, user_id: str, limit: int = 20, offset: int = 0
+    ) -> List[Ticket]:
         pass
 
     @abstractmethod

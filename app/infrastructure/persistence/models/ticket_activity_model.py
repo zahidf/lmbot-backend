@@ -12,9 +12,9 @@ class TicketActivityModel(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     ticket_id = Column(
         UUID(as_uuid=True),
-        ForeignKey('tickets.id', ondelete='CASCADE'),
+        ForeignKey("tickets.id", ondelete="CASCADE"),
         nullable=False,
-        index=True
+        index=True,
     )
 
     action = Column(String(50), nullable=False)
@@ -24,7 +24,7 @@ class TicketActivityModel(Base):
     created_at = Column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
-        nullable=False
+        nullable=False,
     )
 
     ticket = relationship("TicketModel", back_populates="activities")

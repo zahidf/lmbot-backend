@@ -4,32 +4,32 @@ from typing import List
 
 class Settings(BaseSettings):
     """Application settings"""
-    
+
     # Application
     APP_NAME: str = "Lanemark Bot API"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = True
-    
+
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/lmbot_db"
     DATABASE_ECHO: bool = True
     DB_USER: str
-    DB_PASSWORD:str
-    DB_HOST:str
-    DB_PORT:str
-    DB_NAME:str
-    
+    DB_PASSWORD: str
+    DB_HOST: str
+    DB_PORT: str
+    DB_NAME: str
+
     # Security
     SECRET_KEY: str = "secret_key"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    
+
     # OpenAI
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-5-nano"
     OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
     OPENAI_TEMPERATURE: float = 0.7
-    
+
     # RAG Settings
     CHUNK_SIZE: int = 1000
     CHUNK_OVERLAP: int = 200
@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     SEMANTIC_CHUNKING_MIN_CHUNK_SIZE: int = 500
     SEMANTIC_CHUNKING_MAX_CHUNK_SIZE: int = 1500
     SEMANTIC_CHUNKING_CHUNK_OVERLAP: int = 200
-    
+
     # Supabase Storage
     USE_SUPABASE_STORAGE: bool = False
     SUPABASE_URL: str = ""
@@ -50,18 +50,16 @@ class Settings(BaseSettings):
 
     # CORS
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001"
-    
+
     @property
     def cors_origins_list(self) -> List[str]:
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
-    
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        case_sensitive=True
-    )
+
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
 
 
 _settings = None
+
 
 def get_settings() -> Settings:
     global _settings

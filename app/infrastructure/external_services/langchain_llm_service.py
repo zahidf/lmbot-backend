@@ -9,10 +9,19 @@ class LangChainLLMService(LLMService):
     """LangChain implementation of LLM service"""
 
     GAS_SAFETY_KEYWORDS = [
-        "commissioning", "gas valve", "gas train", "electrode",
-        "pressure test", "leak test", "installation procedure",
-        "gas pressure", "pilot gas", "isolat", "gas cock",
-        "burner head", "gas supply",
+        "commissioning",
+        "gas valve",
+        "gas train",
+        "electrode",
+        "pressure test",
+        "leak test",
+        "installation procedure",
+        "gas pressure",
+        "pilot gas",
+        "isolat",
+        "gas cock",
+        "burner head",
+        "gas supply",
     ]
 
     GAS_SAFETY_DISCLAIMER = (
@@ -27,16 +36,16 @@ class LangChainLLMService(LLMService):
         openai_api_key: str,
         model: str = "gpt-5-nano",
         embedding_model: str = "text-embedding-3-small",
-        temperature: float = 0.7
+        temperature: float = 0.7,
     ):
         self.openai_api_key = openai_api_key
         self.model_name = model
         self.embedding_model_name = embedding_model
         self.temperature = temperature
-        
+
         self._llm = None
         self._embeddings = None
-    
+
     @property
     def llm(self) -> ChatOpenAI:
         """Lazy load LLM"""
@@ -44,25 +53,24 @@ class LangChainLLMService(LLMService):
             self._llm = ChatOpenAI(
                 model=self.model_name,
                 temperature=self.temperature,
-                openai_api_key=self.openai_api_key
+                openai_api_key=self.openai_api_key,
             )
         return self._llm
-    
+
     @property
     def embeddings(self) -> OpenAIEmbeddings:
         """Lazy load embeddings"""
         if self._embeddings is None:
             self._embeddings = OpenAIEmbeddings(
-                model=self.embedding_model_name,
-                openai_api_key=self.openai_api_key
+                model=self.embedding_model_name, openai_api_key=self.openai_api_key
             )
         return self._embeddings
-    
+
     async def generate_embedding(self, text: str) -> List[float]:
         """Generate embedding for text"""
         embedding = await self.embeddings.aembed_query(text)
         return embedding
-    
+
     _SYSTEM_PROMPT = """You are a technical support assistant for Lanemark Combustion Engineering Limited.
 
 Your role is to help customers with their industrial burner products using the provided documentation.
@@ -94,35 +102,36 @@ Product Lines:
 - KS Series: Compact burners"""
 
     def _build_chain(self):
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", self._SYSTEM_PROMPT),
-            ("human", """Context from documentation:
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", self._SYSTEM_PROMPT),
+                (
+                    "human",
+                    """Context from documentation:
 {context}
 
 Customer Question: {query}
 
-Provide a helpful, accurate response based on the documentation.""")
-        ])
+Provide a helpful, accurate response based on the documentation.""",
+                ),
+            ]
+        )
         return prompt | self.llm | StrOutputParser()
 
     def _format_context(self, context_documents: List[str]) -> str:
         return "\n\n".join(
-            f"Document {i+1}:\n{doc}"
-            for i, doc in enumerate(context_documents)
+            f"Document {i+1}:\n{doc}" for i, doc in enumerate(context_documents)
         )
 
     def _disclaimer_suffix(self, response: str) -> Optional[str]:
         lower = response.lower()
-        if any(kw in lower for kw in self.GAS_SAFETY_KEYWORDS) and \
-                not any(ind in lower for ind in self.DISCLAIMER_INDICATORS):
+        if any(kw in lower for kw in self.GAS_SAFETY_KEYWORDS) and not any(
+            ind in lower for ind in self.DISCLAIMER_INDICATORS
+        ):
             return self.GAS_SAFETY_DISCLAIMER
         return None
 
-    async def generate_response(
-        self,
-        query: str,
-        context_documents: List[str]
-    ) -> str:
+    async def generate_response(self, query: str, context_documents: List[str]) -> str:
         """Generate response using RAG with LangChain"""
         context = self._format_context(context_documents)
         chain = self._build_chain()
@@ -130,9 +139,7 @@ Provide a helpful, accurate response based on the documentation.""")
         return self._ensure_safety_disclaimer(response)
 
     async def stream_response(
-        self,
-        query: str,
-        context_documents: List[str]
+        self, query: str, context_documents: List[str]
     ) -> AsyncIterator[str]:
         """Stream response tokens using RAG with LangChain"""
         context = self._format_context(context_documents)
@@ -148,17 +155,20 @@ Provide a helpful, accurate response based on the documentation.""")
     async def generate_summary(self, messages: List[dict]) -> str:
         """Generate a concise 2–3 sentence summary of a chat session for ticket escalation"""
         conversation = "\n".join(
-            f"Customer: {m['query']}\nBot: {m['response']}"
-            for m in messages
+            f"Customer: {m['query']}\nBot: {m['response']}" for m in messages
         )
 
-        prompt = ChatPromptTemplate.from_messages([
-            ("system",
-             "You are a technical support assistant. Summarise the following customer support "
-             "conversation in 2–3 concise sentences, focusing on the customer's issue and what "
-             "the bot was unable to resolve. Be brief and factual."),
-            ("human", "{conversation}")
-        ])
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    "You are a technical support assistant. Summarise the following customer support "
+                    "conversation in 2–3 concise sentences, focusing on the customer's issue and what "
+                    "the bot was unable to resolve. Be brief and factual.",
+                ),
+                ("human", "{conversation}"),
+            ]
+        )
 
         chain = prompt | self.llm | StrOutputParser()
         return await chain.ainvoke({"conversation": conversation})

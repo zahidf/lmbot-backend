@@ -1,6 +1,8 @@
 import pytest
 from unittest.mock import Mock, patch, mock_open, MagicMock
-from app.infrastructure.external_services.document_processor_service import DocumentProcessorService
+from app.infrastructure.external_services.document_processor_service import (
+    DocumentProcessorService,
+)
 
 
 class TestDocumentProcessorService:
@@ -25,7 +27,10 @@ class TestDocumentProcessorService:
         mock_pdf.__enter__ = Mock(return_value=mock_pdf)
         mock_pdf.__exit__ = Mock(return_value=False)
 
-        with patch('app.infrastructure.external_services.document_processor_service.pdfplumber.open', return_value=mock_pdf):
+        with patch(
+            "app.infrastructure.external_services.document_processor_service.pdfplumber.open",
+            return_value=mock_pdf,
+        ):
             # Act
             result = await service.extract_text("/path/to/doc.pdf", "pdf")
 
@@ -50,7 +55,10 @@ class TestDocumentProcessorService:
         mock_pdf.__enter__ = Mock(return_value=mock_pdf)
         mock_pdf.__exit__ = Mock(return_value=False)
 
-        with patch('app.infrastructure.external_services.document_processor_service.pdfplumber.open', return_value=mock_pdf):
+        with patch(
+            "app.infrastructure.external_services.document_processor_service.pdfplumber.open",
+            return_value=mock_pdf,
+        ):
             # Act
             result = await service.extract_text("/path/to/doc.pdf", "pdf")
 
@@ -71,7 +79,10 @@ class TestDocumentProcessorService:
         mock_doc = Mock()
         mock_doc.paragraphs = [mock_para1, mock_para2, mock_para3]
 
-        with patch('app.infrastructure.external_services.document_processor_service.DocxDocument', return_value=mock_doc):
+        with patch(
+            "app.infrastructure.external_services.document_processor_service.DocxDocument",
+            return_value=mock_doc,
+        ):
             # Act
             result = await service.extract_text("/path/to/doc.docx", "docx")
 
@@ -90,7 +101,10 @@ class TestDocumentProcessorService:
         mock_doc = Mock()
         mock_doc.paragraphs = [mock_para]
 
-        with patch('app.infrastructure.external_services.document_processor_service.DocxDocument', return_value=mock_doc):
+        with patch(
+            "app.infrastructure.external_services.document_processor_service.DocxDocument",
+            return_value=mock_doc,
+        ):
             # Act
             result = await service.extract_text("/path/to/doc.doc", "doc")
 
@@ -103,7 +117,7 @@ class TestDocumentProcessorService:
         # Arrange
         file_content = "This is plain text content.\nWith multiple lines."
 
-        with patch('builtins.open', mock_open(read_data=file_content)):
+        with patch("builtins.open", mock_open(read_data=file_content)):
             # Act
             result = await service.extract_text("/path/to/doc.txt", "txt")
 
@@ -116,7 +130,7 @@ class TestDocumentProcessorService:
         # Arrange
         file_content = "Unicode content: café, naïve, 日本語"
 
-        with patch('builtins.open', mock_open(read_data=file_content)):
+        with patch("builtins.open", mock_open(read_data=file_content)):
             # Act
             result = await service.extract_text("/path/to/unicode.txt", "txt")
 
@@ -141,7 +155,10 @@ class TestDocumentProcessorService:
     async def test_extract_text_pdf_file_not_found(self, service):
         """Test PDF extraction when file doesn't exist"""
         # Arrange
-        with patch('app.infrastructure.external_services.document_processor_service.pdfplumber.open', side_effect=FileNotFoundError("File not found")):
+        with patch(
+            "app.infrastructure.external_services.document_processor_service.pdfplumber.open",
+            side_effect=FileNotFoundError("File not found"),
+        ):
             # Act & Assert
             with pytest.raises(FileNotFoundError):
                 await service.extract_text("/nonexistent/path.pdf", "pdf")
@@ -150,7 +167,10 @@ class TestDocumentProcessorService:
     async def test_extract_text_docx_file_not_found(self, service):
         """Test DOCX extraction when file doesn't exist"""
         # Arrange
-        with patch('app.infrastructure.external_services.document_processor_service.DocxDocument', side_effect=FileNotFoundError("File not found")):
+        with patch(
+            "app.infrastructure.external_services.document_processor_service.DocxDocument",
+            side_effect=FileNotFoundError("File not found"),
+        ):
             # Act & Assert
             with pytest.raises(FileNotFoundError):
                 await service.extract_text("/nonexistent/path.docx", "docx")
@@ -159,7 +179,7 @@ class TestDocumentProcessorService:
     async def test_extract_text_txt_file_not_found(self, service):
         """Test TXT extraction when file doesn't exist"""
         # Arrange
-        with patch('builtins.open', side_effect=FileNotFoundError("File not found")):
+        with patch("builtins.open", side_effect=FileNotFoundError("File not found")):
             # Act & Assert
             with pytest.raises(FileNotFoundError):
                 await service.extract_text("/nonexistent/path.txt", "txt")
@@ -179,7 +199,10 @@ class TestDocumentProcessorService:
         mock_pdf.__enter__ = Mock(return_value=mock_pdf)
         mock_pdf.__exit__ = Mock(return_value=False)
 
-        with patch('app.infrastructure.external_services.document_processor_service.pdfplumber.open', return_value=mock_pdf):
+        with patch(
+            "app.infrastructure.external_services.document_processor_service.pdfplumber.open",
+            return_value=mock_pdf,
+        ):
             # Act
             result = await service.extract_text("/path/to/multipage.pdf", "pdf")
 
@@ -196,13 +219,16 @@ class TestDocumentProcessorService:
             Mock(text=""),
             Mock(text="   "),
             Mock(text="\n\t"),
-            Mock(text="Content 2")
+            Mock(text="Content 2"),
         ]
 
         mock_doc = Mock()
         mock_doc.paragraphs = mock_paras
 
-        with patch('app.infrastructure.external_services.document_processor_service.DocxDocument', return_value=mock_doc):
+        with patch(
+            "app.infrastructure.external_services.document_processor_service.DocxDocument",
+            return_value=mock_doc,
+        ):
             # Act
             result = await service.extract_text("/path/to/doc.docx", "docx")
 
