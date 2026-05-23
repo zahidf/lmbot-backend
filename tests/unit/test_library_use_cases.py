@@ -180,6 +180,10 @@ async def test_browse_library_filters_and_sorts_items():
     repo.get_breadcrumbs = AsyncMock(return_value=[folder])
     repo.list_folders = AsyncMock(return_value=[])
     repo.list_files = AsyncMock(return_value=[older_file, newer_file])
+    repo.list_folders_recursive = AsyncMock(return_value=[])
+    repo.list_files_recursive = AsyncMock(return_value=[older_file, newer_file])
+    repo.get_folder_child_counts = AsyncMock(return_value={})
+    repo.get_folder_child_file_sizes = AsyncMock(return_value={})
     use_case = BrowseLibraryItems(repo)
 
     result = await use_case.execute(

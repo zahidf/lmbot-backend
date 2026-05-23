@@ -59,6 +59,13 @@ class LibraryItemResponse(BaseModel):
     name: str
     type: str
     size_bytes: int
+    item_count: Optional[int] = Field(
+        None,
+        description=(
+            "Direct child count for folder items; null for files. Counts immediate "
+            "subfolders and files only."
+        ),
+    )
     created_at: datetime
     updated_at: datetime
 

@@ -2,7 +2,17 @@ from io import BytesIO
 import logging
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 from fastapi.responses import StreamingResponse
 
 from app.application.dtos.library_dtos import (
@@ -92,26 +102,120 @@ def _raise_for_value_error(error: ValueError) -> None:
 
 
 def _file_stream_response(result, disposition: str) -> StreamingResponse:
-    encoded_name = quote(result.file.original_file_name)
-    return StreamingResponse(
-        BytesIO(result.content),
-        media_type=result.file.content_type,
+    return _ranged_file_stream_response(result, disposition, None)
+
+
+def _parse_range_header(range_header: str, content_length: int) -> tuple[int, int]:
+    if not range_header.startswith("bytes="):
+        raise ValueError("Invalid Range header")
+    if "," in range_header:
+        raise ValueError("Multiple ranges are not supported")
+    if content_length <= 0:
+        raise ValueError("Range not satisfiable")
+
+    range_spec = range_header.removeprefix("bytes=").strip()
+    if "-" not in range_spec:
+        raise ValueError("Invalid Range header")
+
+    start_text, end_text = range_spec.split("-", 1)
+    if not start_text and not end_text:
+        raise ValueError("Invalid Range header")
+
+    if not start_text:
+        suffix_length = int(end_text)
+        if suffix_length <= 0:
+            raise ValueError("Range not satisfiable")
+        start = max(content_length - suffix_length, 0)
+        end = content_length - 1
+        return start, end
+
+    start = int(start_text)
+    end = int(end_text) if end_text else content_length - 1
+    if start < 0 or end < start or start >= content_length:
+        raise ValueError("Range not satisfiable")
+    return start, min(end, content_length - 1)
+
+
+def _range_not_satisfiable(content_length: int) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_416_RANGE_NOT_SATISFIABLE,
+        detail="Range not satisfiable",
         headers={
-            "Content-Disposition": (f"{disposition}; filename*=UTF-8''{encoded_name}"),
-            "X-Content-Type-Options": "nosniff",
+            "Accept-Ranges": "bytes",
+            "Content-Range": f"bytes */{content_length}",
         },
+    )
+
+
+def _ranged_file_stream_response(
+    result,
+    disposition: str,
+    range_header: str | None,
+) -> StreamingResponse:
+    encoded_name = quote(result.file.original_file_name)
+    content = result.content
+    content_length = len(content)
+    response_status = status.HTTP_200_OK
+    headers = {
+        "Accept-Ranges": "bytes",
+        "Content-Disposition": (f"{disposition}; filename*=UTF-8''{encoded_name}"),
+        "Content-Length": str(content_length),
+        "X-Content-Type-Options": "nosniff",
+    }
+
+    if range_header:
+        try:
+            start, end = _parse_range_header(range_header, content_length)
+        except (TypeError, ValueError):
+            raise _range_not_satisfiable(content_length)
+
+        content = content[start : end + 1]
+        response_status = status.HTTP_206_PARTIAL_CONTENT
+        headers["Content-Range"] = f"bytes {start}-{end}/{content_length}"
+        headers["Content-Length"] = str(len(content))
+
+    return StreamingResponse(
+        BytesIO(content),
+        status_code=response_status,
+        media_type=result.file.content_type,
+        headers=headers,
     )
 
 
 @router.get("/items", response_model=LibraryItemsResponse)
 async def list_library_items(
-    folder_id: str | None = None,
-    search: str | None = None,
-    type: str | None = None,
-    date: str | None = None,
-    size: str | None = None,
-    limit: int = 100,
-    offset: int = 0,
+    folder_id: str | None = Query(
+        None,
+        description=(
+            "Folder to browse. Without search this lists direct children only; with "
+            "search it restricts results to this folder's recursive subtree."
+        ),
+    ),
+    search: str | None = Query(
+        None,
+        description=(
+            "Case-insensitive name search. With folder_id, searches the full subtree "
+            "under that folder; without folder_id, searches the whole accessible "
+            "library."
+        ),
+    ),
+    type: str | None = Query(None, description="Optional library type filter."),
+    date: str | None = Query(
+        None,
+        description=(
+            "Date sort direction. Use oldest for ascending; any other/omitted value "
+            "sorts newest first. Mutually exclusive with size sorting."
+        ),
+    ),
+    size: str | None = Query(
+        None,
+        description=(
+            "Size sort direction: largest or smallest. This is a separate sort axis "
+            "from date and takes precedence when provided."
+        ),
+    ),
+    limit: int = Query(100, description="Maximum items to return, capped at 100."),
+    offset: int = Query(0, description="Offset into the filtered result set."),
     current_user=Depends(get_current_user),
     use_case: BrowseLibraryItems = Depends(get_browse_library_items_use_case),
 ):
@@ -139,6 +243,7 @@ async def list_library_items(
                     name=item.name,
                     type=item.type,
                     size_bytes=item.size_bytes,
+                    item_count=item.item_count,
                     created_at=item.created_at,
                     updated_at=item.updated_at,
                 )
@@ -271,15 +376,28 @@ async def get_library_file(
         )
 
 
-@router.get("/files/{file_id}/download")
+@router.get(
+    "/files/{file_id}/download",
+    responses={
+        206: {"description": "Partial content for a valid HTTP Range request."},
+        416: {"description": "Range not satisfiable."},
+    },
+)
 async def download_library_file(
     file_id: str,
+    range_header: str | None = Header(
+        None,
+        alias="Range",
+        description="Optional byte range, e.g. bytes=0-1023, bytes=1024-, bytes=-500.",
+    ),
     current_user=Depends(get_current_user),
     use_case: DownloadLibraryFile = Depends(get_download_library_file_use_case),
 ):
     try:
         result = await use_case.execute(file_id)
-        return _file_stream_response(result, "attachment")
+        return _ranged_file_stream_response(result, "attachment", range_header)
+    except HTTPException:
+        raise
     except ValueError as e:
         _raise_for_value_error(e)
     except Exception as e:
@@ -290,15 +408,28 @@ async def download_library_file(
         )
 
 
-@router.get("/files/{file_id}/preview")
+@router.get(
+    "/files/{file_id}/preview",
+    responses={
+        206: {"description": "Partial content for a valid HTTP Range request."},
+        416: {"description": "Range not satisfiable."},
+    },
+)
 async def preview_library_file(
     file_id: str,
+    range_header: str | None = Header(
+        None,
+        alias="Range",
+        description="Optional byte range, e.g. bytes=0-1023, bytes=1024-, bytes=-500.",
+    ),
     current_user=Depends(get_current_user),
     use_case: DownloadLibraryFile = Depends(get_download_library_file_use_case),
 ):
     try:
         result = await use_case.execute(file_id)
-        return _file_stream_response(result, "inline")
+        return _ranged_file_stream_response(result, "inline", range_header)
+    except HTTPException:
+        raise
     except ValueError as e:
         _raise_for_value_error(e)
     except Exception as e:

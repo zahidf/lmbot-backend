@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Any, List, Optional, cast
+from typing import Any, Dict, List, Optional, cast
 
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -105,6 +105,83 @@ class LibraryRepositoryImpl(LibraryRepository):
         result = await self.session.execute(query.order_by(LibraryFolderModel.name))
         return [self._to_folder_entity(model) for model in result.scalars().all()]
 
+    async def list_folders_recursive(
+        self, root_folder_id: Optional[str]
+    ) -> List[LibraryFolder]:
+        if root_folder_id is None:
+            result = await self.session.execute(
+                select(LibraryFolderModel).order_by(LibraryFolderModel.name)
+            )
+            return [self._to_folder_entity(model) for model in result.scalars().all()]
+
+        descendants = (
+            select(LibraryFolderModel.id)
+            .where(LibraryFolderModel.parent_id == uuid.UUID(root_folder_id))
+            .cte(name="library_folder_descendants", recursive=True)
+        )
+        descendants = descendants.union_all(
+            select(LibraryFolderModel.id).where(
+                LibraryFolderModel.parent_id == descendants.c.id
+            )
+        )
+
+        result = await self.session.execute(
+            select(LibraryFolderModel)
+            .where(LibraryFolderModel.id.in_(select(descendants.c.id)))
+            .order_by(LibraryFolderModel.name)
+        )
+        return [self._to_folder_entity(model) for model in result.scalars().all()]
+
+    async def get_folder_child_counts(self, folder_ids: List[str]) -> Dict[str, int]:
+        if not folder_ids:
+            return {}
+
+        folder_uuids = [uuid.UUID(folder_id) for folder_id in folder_ids]
+        counts = {folder_id: 0 for folder_id in folder_ids}
+
+        folder_result = await self.session.execute(
+            select(
+                LibraryFolderModel.parent_id,
+                func.count(LibraryFolderModel.id),
+            )
+            .where(LibraryFolderModel.parent_id.in_(folder_uuids))
+            .group_by(LibraryFolderModel.parent_id)
+        )
+        for parent_id, count in folder_result.all():
+            counts[str(parent_id)] = counts.get(str(parent_id), 0) + int(count)
+
+        file_result = await self.session.execute(
+            select(
+                LibraryFileModel.folder_id,
+                func.count(LibraryFileModel.id),
+            )
+            .where(LibraryFileModel.folder_id.in_(folder_uuids))
+            .group_by(LibraryFileModel.folder_id)
+        )
+        for folder_id, count in file_result.all():
+            counts[str(folder_id)] = counts.get(str(folder_id), 0) + int(count)
+
+        return counts
+
+    async def get_folder_child_file_sizes(
+        self, folder_ids: List[str]
+    ) -> Dict[str, int]:
+        if not folder_ids:
+            return {}
+
+        folder_uuids = [uuid.UUID(folder_id) for folder_id in folder_ids]
+        result = await self.session.execute(
+            select(
+                LibraryFileModel.folder_id,
+                func.coalesce(func.sum(LibraryFileModel.size_bytes), 0),
+            )
+            .where(LibraryFileModel.folder_id.in_(folder_uuids))
+            .group_by(LibraryFileModel.folder_id)
+        )
+        return {
+            str(folder_id): int(size_bytes) for folder_id, size_bytes in result.all()
+        }
+
     async def folder_name_exists(
         self,
         parent_id: Optional[str],
@@ -205,6 +282,37 @@ class LibraryRepositoryImpl(LibraryRepository):
         result = await self.session.execute(
             select(LibraryFileModel)
             .where(LibraryFileModel.folder_id == uuid.UUID(folder_id))
+            .order_by(LibraryFileModel.display_name)
+        )
+        return [self._to_file_entity(model) for model in result.scalars().all()]
+
+    async def list_files_recursive(
+        self, root_folder_id: Optional[str]
+    ) -> List[LibraryFile]:
+        if root_folder_id is None:
+            result = await self.session.execute(
+                select(LibraryFileModel).order_by(LibraryFileModel.display_name)
+            )
+            return [self._to_file_entity(model) for model in result.scalars().all()]
+
+        root_uuid = uuid.UUID(root_folder_id)
+        descendants = (
+            select(LibraryFolderModel.id)
+            .where(LibraryFolderModel.parent_id == root_uuid)
+            .cte(name="library_folder_descendants", recursive=True)
+        )
+        descendants = descendants.union_all(
+            select(LibraryFolderModel.id).where(
+                LibraryFolderModel.parent_id == descendants.c.id
+            )
+        )
+
+        result = await self.session.execute(
+            select(LibraryFileModel)
+            .where(
+                (LibraryFileModel.folder_id == root_uuid)
+                | (LibraryFileModel.folder_id.in_(select(descendants.c.id)))
+            )
             .order_by(LibraryFileModel.display_name)
         )
         return [self._to_file_entity(model) for model in result.scalars().all()]

@@ -35,8 +35,44 @@ class FakeLibraryRepository:
 
     async def list_folders(self, parent_id):
         return [
-            folder for folder in self.folders.values() if folder.parent_id == parent_id
+            folder
+            for folder in self.folders.values()
+            if folder.parent_id == parent_id and getattr(folder, "visible", True)
         ]
+
+    async def list_folders_recursive(self, root_folder_id):
+        if root_folder_id is None:
+            return [
+                folder
+                for folder in self.folders.values()
+                if getattr(folder, "visible", True)
+            ]
+
+        descendants = []
+        pending = [root_folder_id]
+        while pending:
+            parent_id = pending.pop(0)
+            children = await self.list_folders(parent_id)
+            descendants.extend(children)
+            pending.extend(folder.id for folder in children)
+        return descendants
+
+    async def get_folder_child_counts(self, folder_ids):
+        counts = {folder_id: 0 for folder_id in folder_ids}
+        for folder in self.folders.values():
+            if folder.parent_id in counts and getattr(folder, "visible", True):
+                counts[folder.parent_id] += 1
+        for file in self.files.values():
+            if file.folder_id in counts and getattr(file, "visible", True):
+                counts[file.folder_id] += 1
+        return counts
+
+    async def get_folder_child_file_sizes(self, folder_ids):
+        sizes = {folder_id: 0 for folder_id in folder_ids}
+        for file in self.files.values():
+            if file.folder_id in sizes and getattr(file, "visible", True):
+                sizes[file.folder_id] += file.size_bytes
+        return sizes
 
     async def folder_name_exists(self, parent_id, name, exclude_id=None):
         return any(
@@ -78,7 +114,26 @@ class FakeLibraryRepository:
         return self.files.pop(file_id, None) is not None
 
     async def list_files(self, folder_id):
-        return [file for file in self.files.values() if file.folder_id == folder_id]
+        return [
+            file
+            for file in self.files.values()
+            if file.folder_id == folder_id and getattr(file, "visible", True)
+        ]
+
+    async def list_files_recursive(self, root_folder_id):
+        if root_folder_id is None:
+            return [
+                file for file in self.files.values() if getattr(file, "visible", True)
+            ]
+
+        folder_ids = {root_folder_id}
+        for folder in await self.list_folders_recursive(root_folder_id):
+            folder_ids.add(folder.id)
+        return [
+            file
+            for file in self.files.values()
+            if file.folder_id in folder_ids and getattr(file, "visible", True)
+        ]
 
     async def file_name_exists(self, folder_id, display_name, exclude_id=None):
         return any(
@@ -129,7 +184,7 @@ def admin_headers():
     return {"Authorization": "Bearer test-token", "X-User-Role": "admin"}
 
 
-async def _seed_folder(repo, name="TX", parent_id=None):
+def _seed_folder(repo, name="TX", parent_id=None):
     now = datetime.now(timezone.utc)
     folder = LibraryFolder(
         id=str(uuid.uuid4()),
@@ -145,10 +200,11 @@ async def _seed_folder(repo, name="TX", parent_id=None):
     return folder
 
 
-async def _seed_file(repo, storage, folder_id):
+def _seed_file(repo, storage, folder_id):
     now = datetime.now(timezone.utc)
-    storage_path = "library/seed.pdf"
-    storage.files[storage_path] = b"seed manual"
+    storage_path = f"library/{uuid.uuid4()}-seed.pdf"
+    content = b"seed manual"
+    storage.files[storage_path] = content
     file = LibraryFile(
         id=str(uuid.uuid4()),
         folder_id=folder_id,
@@ -157,7 +213,7 @@ async def _seed_file(repo, storage, folder_id):
         storage_path=storage_path,
         content_type="application/pdf",
         file_extension="pdf",
-        size_bytes=11,
+        size_bytes=len(content),
         type="Manual",
         description=None,
         uploaded_by=USER_ID,
@@ -207,6 +263,7 @@ def test_regular_user_can_list_read_and_download(client, library_fakes, auth_hea
     )
     assert download_response.status_code == 200
     assert download_response.content == b"manual bytes"
+    assert download_response.headers["accept-ranges"] == "bytes"
     assert download_response.headers["content-disposition"].startswith("attachment;")
 
     preview_response = client.get(
@@ -215,9 +272,106 @@ def test_regular_user_can_list_read_and_download(client, library_fakes, auth_hea
     )
     assert preview_response.status_code == 200
     assert preview_response.content == b"manual bytes"
+    assert preview_response.headers["accept-ranges"] == "bytes"
     assert preview_response.headers["content-disposition"].startswith("inline;")
     assert preview_response.headers["content-type"].startswith("application/pdf")
     assert repo.files[file_id].storage_path in storage.files
+
+
+def test_list_items_includes_folder_item_counts(client, library_fakes, auth_headers):
+    repo, storage = library_fakes
+    _seed_folder(repo, name="Empty")
+    mixed = _seed_folder(repo, name="Mixed")
+    hidden_file = _seed_file(repo, storage, mixed.id)
+    hidden_file.visible = False
+    _seed_folder(repo, name="Child Folder", parent_id=mixed.id)
+    _seed_file(repo, storage, mixed.id)
+
+    response = client.get("/api/v1/library/items", headers=auth_headers)
+
+    assert response.status_code == 200
+    items = {item["name"]: item for item in response.json()["items"]}
+    assert items["Empty"]["item_count"] == 0
+    assert items["Mixed"]["item_count"] == 2
+
+
+def test_folder_scoped_search_includes_descendants(client, library_fakes, auth_headers):
+    repo, storage = library_fakes
+    manuals = _seed_folder(repo, name="Manuals")
+    pumps = _seed_folder(repo, name="Pumps", parent_id=manuals.id)
+    nested = _seed_folder(repo, name="Nested", parent_id=pumps.id)
+    nested_file = _seed_file(repo, storage, nested.id)
+    nested_file.display_name = "Pump Commissioning PDF"
+    outside = _seed_folder(repo, name="Outside")
+    outside_file = _seed_file(repo, storage, outside.id)
+    outside_file.display_name = "Pump Outside PDF"
+
+    response = client.get(
+        f"/api/v1/library/items?folder_id={manuals.id}&search=pump",
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+    names = {item["name"] for item in response.json()["items"]}
+    assert names == {"Pumps", "Pump Commissioning PDF"}
+
+
+def test_download_and_preview_support_range_requests(
+    client, library_fakes, auth_headers
+):
+    repo, storage = library_fakes
+    content = bytes(range(256)) * 8
+    storage_path = "library/range.pdf"
+    storage.files[storage_path] = content
+    now = datetime.now(timezone.utc)
+    file = LibraryFile(
+        id=str(uuid.uuid4()),
+        folder_id=str(uuid.uuid4()),
+        display_name="Range Manual",
+        original_file_name="range.pdf",
+        storage_path=storage_path,
+        content_type="application/pdf",
+        file_extension="pdf",
+        size_bytes=len(content),
+        type="Manual",
+        description=None,
+        uploaded_by=USER_ID,
+        created_at=now,
+        updated_at=now,
+    )
+    repo.files[file.id] = file
+
+    for endpoint in ("download", "preview"):
+        response = client.get(
+            f"/api/v1/library/files/{file.id}/{endpoint}",
+            headers={**auth_headers, "Range": "bytes=0-1023"},
+        )
+        assert response.status_code == 206
+        assert response.content == content[:1024]
+        assert response.headers["accept-ranges"] == "bytes"
+        assert response.headers["content-range"] == f"bytes 0-1023/{len(content)}"
+        assert response.headers["content-length"] == "1024"
+
+    suffix_response = client.get(
+        f"/api/v1/library/files/{file.id}/preview",
+        headers={**auth_headers, "Range": "bytes=-10"},
+    )
+    assert suffix_response.status_code == 206
+    assert suffix_response.content == content[-10:]
+
+    open_ended_response = client.get(
+        f"/api/v1/library/files/{file.id}/download",
+        headers={**auth_headers, "Range": "bytes=1024-"},
+    )
+    assert open_ended_response.status_code == 206
+    assert open_ended_response.content == content[1024:]
+
+    invalid_response = client.get(
+        f"/api/v1/library/files/{file.id}/download",
+        headers={**auth_headers, "Range": f"bytes={len(content)}-"},
+    )
+    assert invalid_response.status_code == 416
+    assert invalid_response.headers["content-range"] == f"bytes */{len(content)}"
 
 
 def test_regular_user_cannot_write(client, library_fakes, auth_headers):

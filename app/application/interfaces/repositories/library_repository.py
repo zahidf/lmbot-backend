@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from app.domain.entities.library_file import LibraryFile
 from app.domain.entities.library_folder import LibraryFolder
@@ -24,6 +24,22 @@ class LibraryRepository(ABC):
 
     @abstractmethod
     async def list_folders(self, parent_id: Optional[str]) -> List[LibraryFolder]:
+        pass
+
+    @abstractmethod
+    async def list_folders_recursive(
+        self, root_folder_id: Optional[str]
+    ) -> List[LibraryFolder]:
+        pass
+
+    @abstractmethod
+    async def get_folder_child_counts(self, folder_ids: List[str]) -> Dict[str, int]:
+        pass
+
+    @abstractmethod
+    async def get_folder_child_file_sizes(
+        self, folder_ids: List[str]
+    ) -> Dict[str, int]:
         pass
 
     @abstractmethod
@@ -61,6 +77,12 @@ class LibraryRepository(ABC):
 
     @abstractmethod
     async def list_files(self, folder_id: str) -> List[LibraryFile]:
+        pass
+
+    @abstractmethod
+    async def list_files_recursive(
+        self, root_folder_id: Optional[str]
+    ) -> List[LibraryFile]:
         pass
 
     @abstractmethod

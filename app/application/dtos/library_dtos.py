@@ -13,6 +13,7 @@ class LibraryItemDTO:
     name: str
     type: str
     size_bytes: int
+    item_count: Optional[int]
     created_at: datetime
     updated_at: datetime
 

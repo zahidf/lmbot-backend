@@ -14,7 +14,7 @@ class BrowseLibraryItems:
         self.library_repository = library_repository
 
     async def execute(self, dto: LibraryBrowseDTO) -> LibraryBrowseResponseDTO:
-        """Return folders and files for one library folder."""
+        """Return browsable library items with explicit folder-scoped search."""
         current_folder = None
         breadcrumbs: list[LibraryFolder] = []
 
@@ -24,11 +24,23 @@ class BrowseLibraryItems:
                 raise ValueError("Folder not found")
             breadcrumbs = await self.library_repository.get_breadcrumbs(dto.folder_id)
 
-        folders = await self.library_repository.list_folders(dto.folder_id)
-        files = await self._list_files(dto.folder_id)
+        if dto.search:
+            folders = await self.library_repository.list_folders_recursive(
+                dto.folder_id
+            )
+            files = await self.library_repository.list_files_recursive(dto.folder_id)
+        else:
+            folders = await self.library_repository.list_folders(dto.folder_id)
+            files = await self._list_files(dto.folder_id)
+
+        folder_ids = [folder.id for folder in folders if folder.id]
+        child_counts = await self.library_repository.get_folder_child_counts(folder_ids)
+        child_file_sizes = await self.library_repository.get_folder_child_file_sizes(
+            folder_ids
+        )
 
         items = [
-            await self._folder_item(folder)
+            self._folder_item(folder, child_counts, child_file_sizes)
             for folder in folders
             if self._include_folder(folder, dto.search, dto.type)
         ]
@@ -52,15 +64,20 @@ class BrowseLibraryItems:
             return []
         return await self.library_repository.list_files(folder_id)
 
-    async def _folder_item(self, folder: LibraryFolder) -> LibraryItemDTO:
-        files = await self.library_repository.list_files(folder.id or "")
-        size_bytes = sum(file.size_bytes for file in files)
+    def _folder_item(
+        self,
+        folder: LibraryFolder,
+        child_counts: dict[str, int],
+        child_file_sizes: dict[str, int],
+    ) -> LibraryItemDTO:
+        folder_id = folder.id or ""
         return LibraryItemDTO(
-            id=folder.id or "",
+            id=folder_id,
             kind="folder",
             name=folder.name,
             type=folder.type,
-            size_bytes=size_bytes,
+            size_bytes=child_file_sizes.get(folder_id, 0),
+            item_count=child_counts.get(folder_id, 0),
             created_at=folder.created_at,
             updated_at=folder.updated_at,
         )
@@ -72,6 +89,7 @@ class BrowseLibraryItems:
             name=file.display_name,
             type=file.type,
             size_bytes=file.size_bytes,
+            item_count=None,
             created_at=file.created_at,
             updated_at=file.updated_at,
         )
